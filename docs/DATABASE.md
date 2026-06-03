@@ -46,8 +46,22 @@ profiles 1—* user_badges *—1 badges
 `seed.sql` vkladá 8 kompetencií, 8 odznakov, 7 publikovaných misií a ich väzby.
 **Žiadne osobné údaje.**
 
+## Auth a žiacky prístup (migrácia 002)
+
+| Tabuľka | Účel |
+|---|---|
+| `class_join_codes` | Učiteľom vydaný kód triedy. Ukladá `code_hash`, expiráciu, limit použití. |
+| `student_access_codes` | Pseudonymná identita žiaka v triede (pseudonym, `code_hash`). Bez e-mailu. |
+| `student_sessions` | Bearer session žiaka — len `session_token_hash` + expirácia. |
+
+RLS: kódy spravuje len správca triedy (učiteľ/admin) cez helper `manages_class()`.
+`student_sessions` má RLS **bez policy** → prístup len cez service role (server).
+Plaintext kódov/tokenov sa neukladá; hash sa nevracia cez student API.
+
 ## Otvorené otázky / limity
 
+- Žiaci zatiaľ **nie sú viazaní na `auth.users`**; priame čítanie pod RLS pre
+  žiaka je ďalší krok (možnosť `signInAnonymously`). Teraz validuje server.
 - Učiteľské/admin **write** politiky sú zatiaľ minimálne (správa obsahu cez server).
 - Širšia viditeľnosť pre školského admina nad `profiles` je follow-up.
 - Pri tvrdení produkcie overiť vlastníctvo `SECURITY DEFINER` funkcií.

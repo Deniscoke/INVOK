@@ -23,6 +23,26 @@ konzervatívnejší (minimalizácia dát, obmedzenie účelu, žiadne zbytočné
 - Seed a mock dáta neobsahujú **žiadne** reálne mená ani e-maily detí
   (stráži `tests/security/noPersonalData.test.ts`).
 
+## Role a prístup
+
+INVOk rozlišuje tri role (`profiles.role`): **admin školy**, **učiteľ**, **žiak**.
+
+- **Učiteľ / admin** sa prihlasujú cez Supabase Auth (e-mail/heslo, magic-link
+  pripravenosť). Identitu drží `auth.users`; rolu a pseudonym `profiles`.
+- **Žiak – pseudonymný prístup (bez e-mailu):** pripojí sa do triedy **kódom**
+  + zvolenou prezývkou (napr. `Líška-07`) a dostane **nepriehľadný session
+  token** (klientovi sa vráti raz; ukladá sa len jeho hash). V app tabuľkách
+  **neukladáme** e-mail ani reálne meno žiaka.
+
+**Nikdy v plaintexte:** prístupové kódy ani session tokeny — v DB je len ich
+`sha256` hash (`code_hash`, `session_token_hash`), ktorý sa **nevracia** cez
+verejné student API (stráži `tests/security/studentAccess.test.ts`).
+
+**Mock vs produkcia:** bez Supabase tajomstiev bežia `authService` (frontend) aj
+`studentAccessService` (server) v bezpečnom **mock/demo** režime
+(`source: 'mock'`); pri konfigurácii sa použije DB-ready cesta (`source: 'db'`).
+Tabuľky: `supabase/migrations/002_auth_and_student_access.sql`.
+
 ## RLS (Row Level Security)
 
 Zapnutá na všetkých používateľských/školských tabuľkách. Stručne:

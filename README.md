@@ -55,6 +55,16 @@ npm run typecheck   # tsc --noEmit
   **nesmie** sa importovať do frontend kódu. Test to stráži automaticky.
 - Viac v [docs/SECURITY.md](docs/SECURITY.md).
 
+## Role a prístup
+
+- **Učiteľ / admin:** Supabase Auth (e-mail/heslo, magic-link pripravenosť).
+- **Žiak:** pseudonymný prístup kódom triedy + prezývka (napr. `Líška-07`),
+  **bez e-mailu**. Kódy a session tokeny sa ukladajú len ako hash.
+- Bez Supabase tajomstiev beží appka v **demo** režime (plne spustiteľná).
+- Detaily: [docs/SECURITY.md](docs/SECURITY.md), migrácia
+  `supabase/migrations/002_auth_and_student_access.sql`.
+
 ## Ďalšie kroky
 
-Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Supabase Auth + role.
+Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 3 — reálne CRUD misií
+a odovzdaní cez Supabase.
