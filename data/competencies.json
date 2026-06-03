@@ -1,0 +1,138 @@
+[
+  {
+    "id": "fact_detective",
+    "childName": "Detektív faktov",
+    "childDescription": "Overujem informácie a hľadám dôkazy, kým niečomu uverím.",
+    "teacherDescription": "Rozvíja kritické myslenie, mediálnu gramotnosť a prácu so zdrojmi: rozlišovanie faktu, názoru a manipulácie.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Prierezové gramotnosti / mediálna a občianska gramotnosť",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "overenie zdrojov tvrdenia",
+      "identifikácia manipulácie alebo reklamy",
+      "argumentácia podložená dôkazmi"
+    ],
+    "icon": "magnifier"
+  },
+  {
+    "id": "maker_venture",
+    "childName": "Tvorca riešení",
+    "childDescription": "Z nápadu spravím skutočné riešenie, prototyp alebo malú službu.",
+    "teacherDescription": "Rozvíja podnikavosť a iniciatívnosť: premena nápadu na realizovateľný výstup, testovanie a iterácia.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Človek a svet práce / podnikavosť a tvorivosť",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "návrh konkrétneho riešenia problému",
+      "jednoduchý prototyp alebo plán realizácie",
+      "zlepšenie riešenia po spätnej väzbe"
+    ],
+    "icon": "lightbulb"
+  },
+  {
+    "id": "team_builder",
+    "childName": "Staviteľ tímu",
+    "childDescription": "Dohodnem si v tíme roly, držím slovo a pomáham riešiť nezhody.",
+    "teacherDescription": "Rozvíja sociálno-emocionálne zručnosti a štruktúrovanú spoluprácu: rozdelenie rolí, zodpovednosť a riešenie konfliktov.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Sociálno-emocionálne učenie / spolupráca a komunikácia",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "jasné rozdelenie rolí v tíme",
+      "dodržanie dohôd a termínov",
+      "spoločná tímová reflexia"
+    ],
+    "icon": "people"
+  },
+  {
+    "id": "digital_navigator",
+    "childName": "Digitálny navigátor",
+    "childDescription": "Bezpečne sa pohybujem v digitálnom svete a tvorím v ňom obsah.",
+    "teacherDescription": "Rozvíja digitálnu gramotnosť a bezpečnosť: zodpovedná tvorba obsahu, citovanie zdrojov a digitálna hygiena.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Digitálna gramotnosť / bezpečnosť v online prostredí",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "bezpečné zaobchádzanie s údajmi",
+      "citovanie a overovanie digitálnych zdrojov",
+      "tvorba digitálneho výstupu (plagát, mikrostránka)"
+    ],
+    "icon": "compass"
+  },
+  {
+    "id": "community_hero",
+    "childName": "Hrdina komunity",
+    "childDescription": "Pomáham svojmu okoliu a myslím na to, ako moje riešenie ovplyvní ľudí.",
+    "teacherDescription": "Rozvíja občiansku gramotnosť a etické uvažovanie: dopad riešenia na komunitu a rešpekt k pravidlám.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Občianska gramotnosť / hodnoty a komunita",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "prínos riešenia pre komunitu",
+      "etické zdôvodnenie rozhodnutia",
+      "rešpekt k pravidlám a k ľuďom"
+    ],
+    "icon": "heart"
+  },
+  {
+    "id": "resource_guardian",
+    "childName": "Strážca zdrojov",
+    "childDescription": "Viem, že peniaze, čas aj materiál majú hodnotu, a neplytvám nimi.",
+    "teacherDescription": "Rozvíja finančnú gramotnosť a hospodárne myslenie: práca s rozpočtom, prioritami a limitmi.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Finančná gramotnosť / hospodárenie so zdrojmi",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "zostavenie jednoduchého rozpočtu",
+      "zdôvodnenie výdavkov",
+      "rozhodovanie v rámci limitu"
+    ],
+    "icon": "coins"
+  },
+  {
+    "id": "planet_guardian",
+    "childName": "Ochranca planéty",
+    "childDescription": "Premýšľam, ako moje riešenie ovplyvní prírodu, a hľadám šetrnejšiu cestu.",
+    "teacherDescription": "Rozvíja environmentálnu gramotnosť a udržateľné uvažovanie: dopad na prostredie, materiály a opakované použitie.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Environmentálna gramotnosť / udržateľnosť",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "zhodnotenie dopadu na prostredie",
+      "návrh na zníženie odpadu",
+      "voľba udržateľnejších materiálov"
+    ],
+    "icon": "leaf"
+  },
+  {
+    "id": "self_captain",
+    "childName": "Kapitán svojho rastu",
+    "childDescription": "Poznám svoje silné stránky, pýtam si spätnú väzbu a plánujem ďalší krok.",
+    "teacherDescription": "Rozvíja metakogníciu a sebareguláciu: sebareflexia, stanovovanie cieľov a plánovanie vlastného učenia.",
+    "curriculumMapping": {
+      "framework": "ŠVP ZV SK",
+      "area": "Sociálno-emocionálne učenie / sebareflexia a metakognícia",
+      "note": "Interné mapovanie, nie priama citácia oficiálneho dokumentu."
+    },
+    "measurementExamples": [
+      "konkrétna sebareflexia po misii",
+      "stanovenie ďalšieho cieľa",
+      "naplnenie osobného plánu rastu"
+    ],
+    "icon": "star"
+  }
+]

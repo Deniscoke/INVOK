@@ -1,0 +1,54 @@
+# Databáza
+
+Postgres (Supabase). Schéma: `supabase/migrations/001_initial_schema.sql`,
+seed: `supabase/seed.sql`. UUID kľúče, timestamps, check constraints, RLS.
+
+## Tabuľky
+
+| Tabuľka | Účel |
+|---|---|
+| `profiles` | Identita + rola (`admin`/`teacher`/`student`), **pseudonym**, XP, level. |
+| `schools`, `school_memberships` | Školy a členstvo (admin/teacher). |
+| `classes`, `class_memberships` | Triedy a členstvo (teacher/student). |
+| `competencies` | Katalóg hrdinských kompetencií + interné kurikulárne mapovanie. |
+| `missions`, `mission_competencies` | Misie (rubrika, XP, mód) a väzba na kompetencie. |
+| `submissions` | Odovzdania žiakov (text + dôkaz, stav, XP). |
+| `ai_evaluations` | Formatívny výstup AI (1:1 k submission). |
+| `badges`, `user_badges` | Odznaky a ich udelenia. |
+| `user_progress` | Progres XP/level/mastery na kompetenciu. |
+
+## Vzťahy (zjednodušene)
+
+```
+auth.users 1—1 profiles
+schools 1—* classes 1—* class_memberships *—1 profiles
+missions *—* competencies   (cez mission_competencies)
+profiles 1—* submissions 1—1 ai_evaluations
+profiles 1—* user_progress *—1 competencies
+profiles 1—* user_badges *—1 badges
+```
+
+## RLS model
+
+- **Žiak**: vidí/píše len svoje `submissions`, `user_progress`, `user_badges`,
+  svoj `profiles` riadok.
+- **Učiteľ**: cez `teaches_student()` vidí profily, odovzdania, AI hodnotenia a
+  progres žiakov vo **svojich triedach**.
+- **Katalóg**: `competencies`, `badges`, publikované `missions` čitateľné pre
+  prihlásených.
+- **Zápisy** do `ai_evaluations`, `user_progress`, `user_badges` a katalógu:
+  cez **service role** (server), nie z klienta.
+- Pomocné funkcie sú `SECURITY DEFINER`, aby politiky nerekurzovali do tej istej
+  tabuľky.
+
+## Seed
+
+`seed.sql` vkladá 8 kompetencií, 8 odznakov, 7 publikovaných misií a ich väzby.
+**Žiadne osobné údaje.**
+
+## Otvorené otázky / limity
+
+- Učiteľské/admin **write** politiky sú zatiaľ minimálne (správa obsahu cez server).
+- Širšia viditeľnosť pre školského admina nad `profiles` je follow-up.
+- Pri tvrdení produkcie overiť vlastníctvo `SECURITY DEFINER` funkcií.
+- Storage politiky pre upload dôkazov zatiaľ nie sú definované.

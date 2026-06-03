@@ -1,0 +1,66 @@
+[
+  {
+    "id": "first_step",
+    "name": "Prvý krok",
+    "description": "Odovzdal si svoju úplne prvú misiu. Cesta sa začala!",
+    "icon": "rocket",
+    "criteria": "Dokončenie a odovzdanie prvej misie.",
+    "relatedCompetency": null
+  },
+  {
+    "id": "problem_mapper",
+    "name": "Mapér problémov",
+    "description": "Dokázal si jasne pomenovať skutočný problém vo svojom okolí.",
+    "icon": "map",
+    "criteria": "Schválená misia typu zmapovania problému.",
+    "relatedCompetency": "fact_detective"
+  },
+  {
+    "id": "solution_maker",
+    "name": "Tvorca riešení",
+    "description": "Z nápadu si spravil konkrétne riešenie.",
+    "icon": "lightbulb",
+    "criteria": "Schválená misia s návrhom realizovateľného riešenia.",
+    "relatedCompetency": "maker_venture"
+  },
+  {
+    "id": "team_player",
+    "name": "Tímový hráč",
+    "description": "Spoľahlivo si ťahal za jeden povraz v tímovej misii.",
+    "icon": "people",
+    "criteria": "Dokončená tímová misia s pozitívnou tímovou reflexiou.",
+    "relatedCompetency": "team_builder"
+  },
+  {
+    "id": "evidence_master",
+    "name": "Majster dôkazov",
+    "description": "Svoje tvrdenia si podložil silnými dôkazmi.",
+    "icon": "shield",
+    "criteria": "Odovzdanie s vysokým hodnotením kritéria dôkazov.",
+    "relatedCompetency": "fact_detective"
+  },
+  {
+    "id": "planet_friend",
+    "name": "Priateľ planéty",
+    "description": "Tvoje riešenie myslelo aj na prírodu.",
+    "icon": "leaf",
+    "criteria": "Misia, ktorá zohľadnila dopad na prostredie.",
+    "relatedCompetency": "planet_guardian"
+  },
+  {
+    "id": "reflective_mind",
+    "name": "Reflexívna myseľ",
+    "description": "Úprimne si sa zamyslel nad svojím rastom a ďalším krokom.",
+    "icon": "mirror",
+    "criteria": "Dokončená reflexná misia s konkrétnym cieľom.",
+    "relatedCompetency": "self_captain"
+  },
+  {
+    "id": "streak_keeper",
+    "name": "Vytrvalec",
+    "description": "Dokončil si misie niekoľko týždňov po sebe.",
+    "icon": "flame",
+    "criteria": "Dokončené misie vo viacerých po sebe idúcich obdobiach.",
+    "relatedCompetency": null
+  }
+]

@@ -1,0 +1,133 @@
+[
+  {
+    "id": "map_school_problem",
+    "title": "Zmapuj problém v škole",
+    "story": "Každá veľká zmena sa začína tým, že si niekto všimne problém. Staň sa prieskumníkom svojej školy.",
+    "goal": "Nájdi a jasne pomenuj jeden konkrétny problém vo svojej škole, ktorý by sa dal vyriešiť.",
+    "evidenceRequired": {
+      "description": "Krátky popis problému: čo sa deje, koho sa to týka a prečo je to problém.",
+      "acceptedTypes": ["text", "image"]
+    },
+    "targetCompetencies": ["fact_detective", "community_hero"],
+    "rubric": [
+      { "id": "clarity", "label": "Jasnosť", "description": "Problém je konkrétne a zrozumiteľne pomenovaný." },
+      { "id": "evidence", "label": "Dôkazy", "description": "Žiak opiera tvrdenie o pozorovanie alebo dôkaz." },
+      { "id": "impact", "label": "Dopad", "description": "Je jasné, koho sa problém týka." }
+    ],
+    "baseXp": 80,
+    "difficulty": "easy",
+    "suggestedMode": "individual"
+  },
+  {
+    "id": "design_solution",
+    "title": "Navrhni riešenie",
+    "story": "Problém poznáš. Teraz si vynálezca – navrhni nápad, ktorý ho dokáže zmenšiť alebo odstrániť.",
+    "goal": "Navrhni jedno realizovateľné riešenie zmapovaného problému a opíš jeho prvý krok.",
+    "evidenceRequired": {
+      "description": "Popis riešenia: ako by fungovalo a aký je prvý konkrétny krok.",
+      "acceptedTypes": ["text", "image", "link"]
+    },
+    "targetCompetencies": ["maker_venture", "self_captain"],
+    "rubric": [
+      { "id": "relevance", "label": "Relevantnosť", "description": "Riešenie sa naozaj týka pomenovaného problému." },
+      { "id": "feasibility", "label": "Realizovateľnosť", "description": "Riešenie je v možnostiach žiaka alebo triedy." },
+      { "id": "first_step", "label": "Prvý krok", "description": "Je opísaný konkrétny prvý krok." }
+    ],
+    "baseXp": 120,
+    "difficulty": "medium",
+    "suggestedMode": "individual"
+  },
+  {
+    "id": "test_solution",
+    "title": "Over riešenie v triede",
+    "story": "Dobrý nápad treba vyskúšať. Otestujte riešenie spolu a zbierajte, čo funguje a čo nie.",
+    "goal": "V tíme otestujte navrhnuté riešenie v malom a zaznamenajte výsledok.",
+    "evidenceRequired": {
+      "description": "Záznam z testu: čo ste skúsili, čo sa stalo a čo ste zistili.",
+      "acceptedTypes": ["text", "image"]
+    },
+    "targetCompetencies": ["maker_venture", "team_builder", "fact_detective"],
+    "rubric": [
+      { "id": "method", "label": "Postup", "description": "Test má jasný a opakovateľný postup." },
+      { "id": "teamwork", "label": "Tímová práca", "description": "Roly v tíme sú rozdelené a dodržané." },
+      { "id": "findings", "label": "Zistenia", "description": "Výsledok testu je podložený pozorovaním." }
+    ],
+    "baseXp": 150,
+    "difficulty": "medium",
+    "suggestedMode": "team"
+  },
+  {
+    "id": "mini_pitch",
+    "title": "Priprav mini pitch",
+    "story": "Najlepší nápad nepomôže, ak ho nikto nepochopí. Priprav krátku prezentáciu svojho riešenia.",
+    "goal": "Priprav mini pitch (do 2 minút), ktorý jasne vysvetlí problém aj riešenie.",
+    "evidenceRequired": {
+      "description": "Osnova pitchu alebo digitálny plagát: problém, riešenie, prínos.",
+      "acceptedTypes": ["text", "image", "link"]
+    },
+    "targetCompetencies": ["digital_navigator", "self_captain", "maker_venture"],
+    "rubric": [
+      { "id": "structure", "label": "Štruktúra", "description": "Pitch má jasný začiatok, jadro a záver." },
+      { "id": "clarity", "label": "Zrozumiteľnosť", "description": "Posolstvo je pochopiteľné aj pre niekoho zvonku." },
+      { "id": "value", "label": "Prínos", "description": "Je jasné, prečo má riešenie hodnotu." }
+    ],
+    "baseXp": 140,
+    "difficulty": "medium",
+    "suggestedMode": "individual"
+  },
+  {
+    "id": "collect_feedback",
+    "title": "Získaj spätnú väzbu",
+    "story": "Spätná väzba je dar. Opýtaj sa spolužiakov, čo by na tvojom riešení zlepšili.",
+    "goal": "Získaj spätnú väzbu od aspoň troch ľudí a zhrň, čo si sa dozvedel.",
+    "evidenceRequired": {
+      "description": "Zhrnutie spätnej väzby: čo zaznelo a čo ťa prekvapilo.",
+      "acceptedTypes": ["text"]
+    },
+    "targetCompetencies": ["team_builder", "self_captain"],
+    "rubric": [
+      { "id": "openness", "label": "Otvorenosť", "description": "Žiak prijíma aj kritickú spätnú väzbu." },
+      { "id": "synthesis", "label": "Zhrnutie", "description": "Spätná väzba je zrozumiteľne zhrnutá." }
+    ],
+    "baseXp": 90,
+    "difficulty": "easy",
+    "suggestedMode": "team"
+  },
+  {
+    "id": "improve_solution",
+    "title": "Zlepši návrh",
+    "story": "Skutoční tvorcovia svoj nápad vylepšujú. Použi spätnú väzbu a sprav riešenie lepším.",
+    "goal": "Na základe spätnej väzby uprav riešenie a vysvetli, čo a prečo si zmenil.",
+    "evidenceRequired": {
+      "description": "Popis vylepšenia: pôvodný stav, zmena a dôvod zmeny.",
+      "acceptedTypes": ["text", "image", "link"]
+    },
+    "targetCompetencies": ["maker_venture", "self_captain", "resource_guardian"],
+    "rubric": [
+      { "id": "iteration", "label": "Iterácia", "description": "Zmena vychádza z konkrétnej spätnej väzby." },
+      { "id": "reasoning", "label": "Zdôvodnenie", "description": "Žiak vysvetľuje, prečo zmenu spravil." },
+      { "id": "resourcefulness", "label": "Hospodárnosť", "description": "Riešenie zohľadňuje čas, materiál alebo náklady." }
+    ],
+    "baseXp": 180,
+    "difficulty": "hard",
+    "suggestedMode": "individual"
+  },
+  {
+    "id": "reflect_growth",
+    "title": "Reflektuj svoj rast",
+    "story": "Cesta hrdinu sa nekončí cieľom, ale poučením. Pozri sa späť na to, ako si rástol.",
+    "goal": "Napíš krátku reflexiu: čo sa ti podarilo, čo bolo ťažké a čo skúsiš nabudúce.",
+    "evidenceRequired": {
+      "description": "Osobná reflexia rastu s aspoň jedným konkrétnym ďalším cieľom.",
+      "acceptedTypes": ["text"]
+    },
+    "targetCompetencies": ["self_captain"],
+    "rubric": [
+      { "id": "honesty", "label": "Úprimnosť", "description": "Reflexia pomenúva aj to, čo bolo ťažké." },
+      { "id": "specificity", "label": "Konkrétnosť", "description": "Ďalší cieľ je konkrétny a uskutočniteľný." }
+    ],
+    "baseXp": 100,
+    "difficulty": "easy",
+    "suggestedMode": "individual"
+  }
+]

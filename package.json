@@ -1,0 +1,28 @@
+{
+  "name": "invok-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "INVOk – gamifikovaná vzdelávacia platforma pre slovenské základné školy (ŠVP ZV).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "@vercel/node": "^3.2.24",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}
