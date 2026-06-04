@@ -63,8 +63,13 @@ function isEvidenceType(value: unknown): value is EvidenceType {
   return typeof value === 'string' && (ALLOWED_EVIDENCE_TYPES as readonly string[]).includes(value);
 }
 
-function isDangerous(text: string): boolean {
+/** True if the text contains HTML/script injection patterns. Shared helper. */
+export function containsDangerousHtml(text: string): boolean {
   return DANGEROUS_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function isDangerous(text: string): boolean {
+  return containsDangerousHtml(text);
 }
 
 function checkDanger(field: string, value: string, issues: ValidationIssue[]): void {

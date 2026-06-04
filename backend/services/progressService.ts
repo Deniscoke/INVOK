@@ -59,6 +59,24 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
+export type ReviewDecisionKind = 'approved' | 'adjusted' | 'needs_revision' | 'rejected';
+
+/**
+ * Final XP committed after a teacher review.
+ *  - approved / adjusted → XP scaled by the final (teacher-confirmed) score
+ *  - needs_revision / rejected → no XP (student keeps the chance to improve)
+ *
+ * This is intentionally simple and auditable: XP is always traceable to a
+ * teacher decision + a final score.
+ */
+export function finalXpForReview(baseXp: number, finalScore: number, decision: ReviewDecisionKind): number {
+  if (decision === 'approved' || decision === 'adjusted') {
+    const score = Math.min(100, Math.max(0, finalScore));
+    return Math.round(Math.max(0, baseXp) * (score / 100));
+  }
+  return 0;
+}
+
 /**
  * Apply earned XP to a competency progress record, recomputing the level.
  * `masteryDelta` nudges the mastery estimate (clamped to [0,1]); mastery is a

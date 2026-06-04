@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
 import { getSubmissionById } from '../../backend/services/submissionService';
+import { getTeacherReviewForSubmission } from '../../backend/services/teacherReviewService';
 
 /**
  * GET /api/submissions/[id]
@@ -33,7 +34,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(404).json({ error: 'Odovzdanie nenájdené alebo nemáš prístup.' });
       return;
     }
-    res.status(200).json({ submission });
+    // Include the teacher review (final feedback) if one exists and is in scope.
+    const review = await getTeacherReviewForSubmission(ctx, id.trim());
+    res.status(200).json({ submission, review });
   } catch {
     res.status(500).json({ error: 'Interná chyba servera.' });
   }

@@ -47,6 +47,10 @@ INVOk rozlišuje tri role (`profiles.role`): **admin školy**, **učiteľ**, **�
 `sha256` hash (`code_hash`, `session_token_hash`), ktorý sa **nevracia** cez
 verejné student API (stráži `tests/security/studentAccess.test.ts`).
 
+**Teacher review:** `teacher_reviews` má RLS – číta reviewer / správca triedy /
+vlastník odovzdania; zapisuje len správca triedy. Review API nevracia hashe ani
+secrets (stráži `tests/security/teacherReviewAccess.test.ts`).
+
 **Mock vs produkcia:** bez Supabase tajomstiev bežia `authService` (frontend) aj
 `studentAccessService` (server) v bezpečnom **mock/demo** režime
 (`source: 'mock'`); pri konfigurácii sa použije DB-ready cesta (`source: 'db'`).

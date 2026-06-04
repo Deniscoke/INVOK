@@ -36,7 +36,20 @@ motiváciu a poškodiť sociálno-emocionálnu pohodu. Preto uprednostňujeme mo
 **„mastery / progress first"**: osobný rast, tímové achievementy a odznaky za
 konkrétne správanie. Sociálno-emocionálna pohoda je samostatný kurikulárny cieľ.
 
+## Finálne XP je viazané na učiteľa (auditovateľné)
+
+XP funguje ako **dvojfázový commit**:
+
+1. **Odovzdanie + AI** → predbežné `xp_awarded` na riadku odovzdania, ale
+   **nezapočíta sa** do `profiles.total_xp` ani `user_progress`.
+2. **Učiteľský review** → až rozhodnutie `approved`/`adjusted` **commitne**
+   finálne XP (škálované finálnym skóre). `needs_revision`/`rejected` = 0 XP.
+
+Pravidlo (`progressService.finalXpForReview`): `XP = baseXp × finalScore/100`
+pre approved/adjusted, inak 0. Každý zisk XP je tak dohľadateľný k jednému
+záznamu v `teacher_reviews` (audit trail pre školu/grant).
+
 ## Mastery
 
 `user_progress.mastery` (0–1) je **formatívny signál** zvládnutia kompetencie,
-nie známka. Aktualizuje sa z misií a (neskôr) z učiteľského posúdenia.
+nie známka. Aktualizuje sa z misií a z **učiteľského posúdenia** (po approve/adjust).

@@ -2,7 +2,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 import { LandingPage } from './pages/LandingPage';
 import { StudentDashboardPage, mountStudentDashboard } from './pages/StudentDashboardPage';
-import { TeacherDashboardPage } from './pages/TeacherDashboardPage';
+import { TeacherDashboardPage, mountTeacherDashboard } from './pages/TeacherDashboardPage';
 import { LoginPage, mountLoginPage } from './pages/LoginPage';
 import { StudentJoinPage, mountStudentJoinPage } from './pages/StudentJoinPage';
 import { AuthStatus } from './components/AuthStatus';
@@ -19,7 +19,7 @@ interface Route {
 const routes: Route[] = [
   { path: '/', label: 'Domov', render: LandingPage, inNav: true },
   { path: '/student', label: 'Žiak', render: StudentDashboardPage, mount: mountStudentDashboard, inNav: true },
-  { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, inNav: true },
+  { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, mount: mountTeacherDashboard, inNav: true },
   { path: '/login', label: 'Prihlásenie', render: LoginPage, mount: mountLoginPage },
   { path: '/join', label: 'Pripojiť sa', render: StudentJoinPage, mount: mountStudentJoinPage },
 ];

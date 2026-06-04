@@ -72,8 +72,11 @@ npm run typecheck   # tsc --noEmit
   + `ANTHROPIC_API_KEY` + `AI_VALIDATION_MODEL`. Bez kľúča sa použije mock.
 - Do AI sa **neposielajú osobné údaje**; raw prompty sa neukladajú. Detaily:
   [docs/AI_VALIDATION.md](docs/AI_VALIDATION.md).
+- **Učiteľ je garant:** AI dá návrh, učiteľ ho potvrdí/upraví/vráti/zamietne
+  (`teacher_reviews`, auditovateľné). **Finálne XP sa pripíše až po
+  učiteľskom schválení** (approve/adjust).
 
 ## Ďalšie kroky
 
-Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 5 — teacher review
-workflow (učiteľ potvrdí/upraví AI návrh).
+Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 6 — školský dashboard
+(agregovaný anonymizovaný progres).

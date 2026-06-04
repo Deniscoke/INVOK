@@ -58,6 +58,18 @@ RLS: kódy spravuje len správca triedy (učiteľ/admin) cez helper `manages_cla
 `student_sessions` má RLS **bez policy** → prístup len cez service role (server).
 Plaintext kódov/tokenov sa neukladá; hash sa nevracia cez student API.
 
+## Teacher review (migrácia 004)
+
+| Tabuľka | Účel |
+|---|---|
+| `teacher_reviews` | Auditovateľné rozhodnutie učiteľa nad AI návrhom: `decision` (`approved`/`adjusted`/`needs_revision`/`rejected`), `final_valid`, `final_score` (0–100), `feedback_text`, `adjustment_reason`, reviewer + timestamps. |
+
+`submissions.status` rozšírený o `rejected`. RLS na `teacher_reviews`: číta
+reviewer / správca triedy (`manages_submission()`) / vlastník odovzdania
+(`owns_submission()`); zapisuje len správca triedy ako sám seba. Finálne XP
+commituje server (`teacherReviewService.applyReviewToSubmission`) po
+approve/adjust.
+
 ## Otvorené otázky / limity
 
 - Žiaci zatiaľ **nie sú viazaní na `auth.users`**; priame čítanie pod RLS pre

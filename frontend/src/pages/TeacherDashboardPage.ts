@@ -1,6 +1,8 @@
 import { icon } from '../components/icons';
 import { CompetencyCard } from '../components/CompetencyCard';
+import { TeacherReviewPanel, mountTeacherReviewPanel } from '../components/TeacherReviewPanel';
 import { getClassOverview, getCompetencyById, getMissionById, getPendingReviews } from '../services/mockDataService';
+import type { SubmitReviewResult } from '../services/teacherReviewApi';
 
 function confidenceClass(confidence: number): string {
   if (confidence >= 0.8) return 'status--done';
@@ -21,18 +23,21 @@ export function TeacherDashboardPage(): string {
     .map((review) => {
       const mission = getMissionById(review.missionId);
       return `
-      <div class="review">
-        <div>
-          <strong>${review.studentAlias}</strong>
-          <span class="muted"> · ${mission ? mission.title : review.missionId}</span>
-          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-            <span class="status ${review.aiValid ? 'status--done' : 'status--invalid'}">AI: ${review.aiValid ? 'valid' : 'invalid'}</span>
-            <span class="muted" style="font-size:var(--fs-sm)">skóre ${review.aiScore}${scoreBar(review.aiScore)}</span>
-            <span class="chip ${confidenceClass(review.aiConfidence)}" style="border:0">istota ${Math.round(review.aiConfidence * 100)} %</span>
-            ${review.suggestedTeacherReview ? `<span class="chip chip--warm">${icon('shield', 12)} navrhnuté posúdenie</span>` : ''}
+      <div>
+        <div class="review">
+          <div>
+            <strong>${review.studentAlias}</strong>
+            <span class="muted"> · ${mission ? mission.title : review.missionId}</span>
+            <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+              <span class="status ${review.aiValid ? 'status--done' : 'status--invalid'}">AI: ${review.aiValid ? 'valid' : 'invalid'}</span>
+              <span class="muted" style="font-size:var(--fs-sm)">skóre ${review.aiScore}${scoreBar(review.aiScore)}</span>
+              <span class="chip ${confidenceClass(review.aiConfidence)}" style="border:0">istota ${Math.round(review.aiConfidence * 100)} %</span>
+              ${review.suggestedTeacherReview ? `<span class="chip chip--warm">${icon('shield', 12)} navrhnuté posúdenie</span>` : ''}
+            </div>
           </div>
+          <button class="btn btn--ghost btn--sm" type="button" data-review-open="${review.submissionId}">Posúdiť</button>
         </div>
-        <button class="btn btn--ghost btn--sm" type="button">Otvoriť</button>
+        <div id="review-slot-${review.submissionId}"></div>
       </div>`;
     })
     .join('');
@@ -86,4 +91,44 @@ export function TeacherDashboardPage(): string {
     <div class="section-title"><h2>Kompetencie triedy</h2><span class="muted">interné mapovanie na ŠVP ZV</span></div>
     <div class="grid grid--cards">${coverageCards}</div>
   </section>`;
+}
+
+/** Wire the "Posúdiť" buttons to open/close an inline review panel. */
+export function mountTeacherDashboard(): void {
+  const reviews = getPendingReviews();
+  for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-review-open]'))) {
+    button.addEventListener('click', () => {
+      const id = button.getAttribute('data-review-open');
+      if (!id) return;
+      const slot = document.querySelector<HTMLDivElement>(`#review-slot-${id}`);
+      if (!slot) return;
+
+      // Toggle: if already open, close it.
+      if (slot.innerHTML.trim().length > 0) {
+        slot.innerHTML = '';
+        button.textContent = 'Posúdiť';
+        return;
+      }
+
+      const review = reviews.find((r) => r.submissionId === id);
+      if (!review) return;
+      button.textContent = 'Zavrieť';
+
+      const onResult = (result: SubmitReviewResult): void => {
+        if (!result.ok) return;
+        const decision = result.review?.decision ?? 'approved';
+        slot.innerHTML = `<div class="teacher-hint" style="border-left-color:var(--color-success);background:var(--tint-success)">
+          <div class="teacher-hint__label" style="color:#15803d">Hodnotenie uložené</div>
+          Rozhodnutie: <strong>${decision}</strong> · finálne XP: <strong>${result.finalXp ?? 0}</strong>
+          ${result.source === 'mock' ? ' <span class="chip chip--muted">demo</span>' : ''}
+        </div>`;
+        button.textContent = 'Hotovo';
+        button.disabled = true;
+      };
+
+      const panelOptions = { submissionId: id, aiScore: review.aiScore, aiValid: review.aiValid, onResult };
+      slot.innerHTML = TeacherReviewPanel(panelOptions);
+      mountTeacherReviewPanel(panelOptions);
+    });
+  }
 }

@@ -162,11 +162,15 @@ main { padding: var(--space-6) 0 var(--space-8); }
 .auth-page { max-width: 460px; margin: 0 auto; }
 .auth-page h1 { font-size: var(--fs-xl); }
 .field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: var(--fs-sm); color: var(--color-text); }
-.field input {
+.field input, .field textarea, .field select {
   font: inherit; font-weight: 400; padding: var(--space-3); border-radius: var(--radius-md);
   border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+  width: 100%;
 }
-.field input:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--color-primary); }
+.field textarea { resize: vertical; min-height: 60px; }
+.field input:focus-visible, .field textarea:focus-visible, .field select:focus-visible {
+  outline: none; box-shadow: var(--focus-ring); border-color: var(--color-primary);
+}
 
 /* Footer ------------------------------------------------------------------ */
 .app-footer { border-top: 1px solid var(--color-border); padding: var(--space-5) 0; color: var(--color-muted); font-size: var(--fs-sm); }

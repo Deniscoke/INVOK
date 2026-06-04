@@ -18,7 +18,7 @@ import type { RequestContext } from '../lib/requestContext';
 import type { SubmissionInput, SubmissionQueryFilter } from '../validators/submissionValidator';
 import { validateSubmissionWithAI } from './aiValidationService';
 import { getMissionById } from './missionService';
-import { applyXp, levelForXp } from './progressService';
+import { levelForXp } from './progressService';
 import { getServerEnv, missingServerSecrets } from '../lib/env';
 
 export interface SubmissionRow {
@@ -245,63 +245,13 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
       model: evaluation.model,
     });
 
-    // Update submission status and xp
+    // PROVISIONAL XP only: recorded on the submission row but NOT committed to
+    // the student's totals. Final XP is applied to profile/user_progress only
+    // after a teacher review (approved/adjusted) — see teacherReviewService.
     await admin
       .from('submissions')
       .update({ status: 'ai_reviewed', xp_awarded: xpAwarded })
       .eq('id', submissionId);
-
-    // Update user_progress for each detected competency (supabase_user only for now)
-    if (studentId && evaluation.valid) {
-      for (const detected of evaluation.detectedCompetencies) {
-        const xpShare = Math.round(xpAwarded / Math.max(evaluation.detectedCompetencies.length, 1));
-        const { data: existing } = await admin
-          .from('user_progress')
-          .select('id, xp, level, mastery')
-          .eq('user_id', studentId)
-          .eq('competency_id', detected.id)
-          .maybeSingle();
-
-        const existingRow = existing as Record<string, unknown> | null;
-        const current = {
-          competencyId: detected.id,
-          xp: Number(existingRow?.xp ?? 0),
-          level: Number(existingRow?.level ?? 1),
-          mastery: Number(existingRow?.mastery ?? 0),
-        };
-        const updated = applyXp(current, xpShare, detected.strength * 0.05);
-
-        if (existingRow) {
-          await admin
-            .from('user_progress')
-            .update({ xp: updated.xp, level: updated.level, mastery: updated.mastery })
-            .eq('id', String(existingRow.id));
-        } else {
-          await admin.from('user_progress').insert({
-            user_id: studentId,
-            competency_id: detected.id,
-            xp: updated.xp,
-            level: updated.level,
-            mastery: updated.mastery,
-          });
-        }
-      }
-
-      // Update total XP on profile
-      const { data: prof } = await admin
-        .from('profiles')
-        .select('total_xp')
-        .eq('id', studentId)
-        .single();
-      const profileRow = prof as Record<string, unknown> | null;
-      if (profileRow) {
-        const newXp = Number(profileRow.total_xp ?? 0) + xpAwarded;
-        await admin
-          .from('profiles')
-          .update({ total_xp: newXp, level: levelForXp(newXp) })
-          .eq('id', studentId);
-      }
-    }
 
     return {
       ok: true,
