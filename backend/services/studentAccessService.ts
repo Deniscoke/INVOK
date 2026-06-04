@@ -39,6 +39,7 @@ export interface SessionResult {
   sessionMode: 'pseudonymous';
   studentAlias?: string;
   classId?: string;
+  studentAccessCodeId?: string; // needed to link submissions
   source: 'mock' | 'db';
 }
 
@@ -92,7 +93,9 @@ export async function verifyStudentSession(token: unknown): Promise<SessionResul
   if (typeof token !== 'string' || token.length < 8) {
     return { valid: false, sessionMode: 'pseudonymous', source: isConfigured() ? 'db' : 'mock' };
   }
-  return isConfigured() ? dbVerifySession(token) : { valid: true, sessionMode: 'pseudonymous', source: 'mock' };
+  return isConfigured()
+    ? dbVerifySession(token)
+    : { valid: true, sessionMode: 'pseudonymous', studentAccessCodeId: 'mock-access-code', studentAlias: 'Líška-07', classId: 'demo-class', source: 'mock' };
 }
 
 // --- MOCK path (no DB) ------------------------------------------------------
@@ -167,7 +170,7 @@ async function dbVerifySession(token: string): Promise<SessionResult> {
     const admin = getSupabaseAdmin();
     const { data } = await admin
       .from('student_sessions')
-      .select('expires_at, student_access_codes(class_id, pseudonym)')
+      .select('expires_at, student_access_code_id, student_access_codes(id, class_id, pseudonym)')
       .eq('session_token_hash', hashToken(token))
       .maybeSingle();
 
@@ -181,6 +184,7 @@ async function dbVerifySession(token: string): Promise<SessionResult> {
       sessionMode: 'pseudonymous',
       studentAlias: access ? String(access.pseudonym) : undefined,
       classId: access ? String(access.class_id) : undefined,
+      studentAccessCodeId: access ? String(access.id) : undefined,
       source: 'db',
     };
   } catch {

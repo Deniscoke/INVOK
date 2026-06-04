@@ -42,9 +42,35 @@ export interface AIValidationContext {
 
 const MOCK_MODEL = 'mock-formative-validator-v1';
 
-const EVIDENCE_KEYWORDS = ['lebo', 'pretože', 'zdroj', 'dôkaz', 'zistil', 'všimol', 'údaj', 'data'];
-const SOLUTION_KEYWORDS = ['riešenie', 'navrhujem', 'zlepšiť', 'krok', 'plán', 'vyriešiť'];
-const REFLECTION_KEYWORDS = ['naučil', 'nabudúce', 'cieľ', 'zlepším', 'uvedomil'];
+// General signal groups
+const EVIDENCE_KEYWORDS = ['lebo', 'pretože', 'zdroj', 'dôkaz', 'zistil', 'všimol', 'údaj', 'data', 'videl', 'počul'];
+const SOLUTION_KEYWORDS = ['riešenie', 'navrhujem', 'zlepšiť', 'krok', 'plán', 'vyriešiť', 'zmeniť', 'idea', 'nápad'];
+const REFLECTION_KEYWORDS = ['naučil', 'nabudúce', 'cieľ', 'zlepším', 'uvedomil', 'skúsim', 'podarilo', 'ťažké'];
+const PROBLEM_KEYWORDS = ['problém', 'chyba', 'zlé', 'chýba', 'nedostatok', 'trápi', 'sťažuje', 'bráni'];
+const CLARITY_KEYWORDS = ['pretože', 'teda', 'napríklad', 'konkrétne', 'znamená', 'čiže', 'tým', 'takto'];
+const COMMUNITY_KEYWORDS = ['škola', 'trieda', 'spolužiaci', 'učiteľ', 'komunita', 'okolie', 'ľudia'];
+
+// Per-criterion keyword map: rubric criterion id → relevant signal words
+const CRITERION_KEYWORDS: Record<string, string[]> = {
+  clarity:       CLARITY_KEYWORDS,
+  evidence:      EVIDENCE_KEYWORDS,
+  impact:        COMMUNITY_KEYWORDS,
+  relevance:     SOLUTION_KEYWORDS,
+  feasibility:   ['môžeme', 'dá', 'stačí', 'jednoducho', 'krok', 'realizovateľné', 'uskutočniť'],
+  first_step:    ['krok', 'začneme', 'prvý', 'najprv', 'plán', 'cieľ'],
+  method:        ['postup', 'krok', 'spôsob', 'ako', 'metóda', 'plán'],
+  teamwork:      ['spolu', 'tím', 'pomohol', 'rozdelili', 'dohodli', 'spolupráca'],
+  findings:      EVIDENCE_KEYWORDS,
+  structure:     ['po prvé', 'po druhé', 'záver', 'úvod', 'hlavná', 'začiatok', 'koniec'],
+  openness:      ['pochopil', 'súhlasím', 'zmením', 'skúsim', 'vďaka', 'pomohlo'],
+  synthesis:     ['zhrnutie', 'celkovo', 'väčšina', 'dôvod', 'hlavne'],
+  iteration:     ['zmenili', 'vylepšili', 'opravili', 'inak', 'lepšie', 'podľa'],
+  reasoning:     CLARITY_KEYWORDS,
+  resourcefulness: ['čas', 'peniaze', 'materiál', 'menej', 'šetriť', 'hospodárne'],
+  honesty:       REFLECTION_KEYWORDS,
+  specificity:   ['konkrétne', 'presne', 'nabudúce', 'plánujem', 'cieľ'],
+  value:         COMMUNITY_KEYWORDS,
+};
 
 function countKeywords(text: string, keywords: string[]): number {
   const lower = text.toLowerCase();
@@ -79,27 +105,40 @@ function mockEvaluate(input: SubmissionInput, context: AIValidationContext): AIV
   const evidenceSignals = countKeywords(combined, EVIDENCE_KEYWORDS);
   const solutionSignals = countKeywords(combined, SOLUTION_KEYWORDS);
   const reflectionSignals = countKeywords(combined, REFLECTION_KEYWORDS);
-  const totalSignals = evidenceSignals + solutionSignals + reflectionSignals;
+  const problemSignals = countKeywords(combined, PROBLEM_KEYWORDS);
+  const totalSignals = evidenceSignals + solutionSignals + reflectionSignals + problemSignals;
 
-  // Length contributes up to ~55 points, signals up to ~45.
-  const lengthScore = clamp(length / 6, 0, 55);
-  const signalScore = clamp(totalSignals * 9, 0, 45);
-  const score = Math.round(clamp(lengthScore + signalScore, 0, 100));
+  // Rubric-aware bonus: if a criterion's specific keywords appear, add points
+  let rubricBonus = 0;
+  if (context.rubric) {
+    for (const criterion of context.rubric) {
+      const keywords = CRITERION_KEYWORDS[criterion.id] ?? CLARITY_KEYWORDS;
+      if (countKeywords(combined, keywords) >= 1) rubricBonus += 5;
+    }
+  }
 
-  // Confidence grows with both length and signal density; stays humble.
-  const confidence = round2(clamp(0.3 + length / 1200 + totalSignals * 0.06, 0.3, 0.95));
+  // Length contributes up to ~50 points, signals up to ~35, rubric bonus up to ~15
+  const lengthScore = clamp(length / 8, 0, 50);
+  const signalScore = clamp(totalSignals * 7, 0, 35);
+  const score = Math.round(clamp(lengthScore + signalScore + rubricBonus, 0, 100));
+
+  // Confidence grows with both length and signal density; deliberately capped at 0.92
+  // so the mock never appears certain enough to bypass teacher review.
+  const confidence = round2(clamp(0.28 + length / 1400 + totalSignals * 0.05, 0.28, 0.92));
 
   const hasEvidence = input.evidenceText.trim().length > 0;
-  const valid = score >= 50 && length >= 40;
+  const valid = score >= 45 && length >= 30;
 
-  // Formative bias: low confidence, weak evidence or borderline score → teacher.
-  const suggestedTeacherReview = !valid || confidence < 0.8 || !hasEvidence || (score >= 50 && score < 65);
+  // Formative bias: low confidence, weak evidence, borderline score → teacher review
+  const suggestedTeacherReview = !valid || confidence < 0.75 || !hasEvidence;
 
-  const reasons = buildReasons(context, { score, hasEvidence, evidenceSignals, solutionSignals });
+  const reasons = buildReasons(context, { score, hasEvidence, combined });
   const detectedCompetencies = buildDetectedCompetencies(context, {
     evidenceSignals,
     solutionSignals,
     reflectionSignals,
+    communitySignals: countKeywords(combined, COMMUNITY_KEYWORDS),
+    problemSignals,
   });
 
   return {
@@ -115,56 +154,94 @@ function mockEvaluate(input: SubmissionInput, context: AIValidationContext): AIV
 
 function buildReasons(
   context: AIValidationContext,
-  signals: { score: number; hasEvidence: boolean; evidenceSignals: number; solutionSignals: number },
+  signals: { score: number; hasEvidence: boolean; combined: string },
 ): AIReason[] {
-  const result = (ok: boolean, partial: boolean): AIReason['result'] =>
-    ok ? 'met' : partial ? 'partial' : 'unmet';
+  const result = (met: boolean, partial: boolean): AIReason['result'] =>
+    met ? 'met' : partial ? 'partial' : 'unmet';
 
   if (context.rubric && context.rubric.length > 0) {
-    return context.rubric.map((criterion, index) => {
-      const met = signals.score >= 65 && (index === 0 || signals.hasEvidence);
-      const partial = signals.score >= 45;
+    return context.rubric.map((criterion) => {
+      const keywords = CRITERION_KEYWORDS[criterion.id] ?? CLARITY_KEYWORDS;
+      const hits = countKeywords(signals.combined, keywords);
+      const met = hits >= 2 && signals.score >= 55;
+      const partial = hits >= 1 || signals.score >= 40;
       return {
         criterion: criterion.label,
         result: result(met, partial),
         explanation: met
           ? `Odovzdanie napĺňa kritérium „${criterion.label}".`
           : partial
-            ? `Kritérium „${criterion.label}" je naznačené, no dôkazy by mohli byť silnejšie.`
+            ? `Kritérium „${criterion.label}" je naznačené — dôkazy môžu byť silnejšie.`
             : `Pre kritérium „${criterion.label}" chýba dostatočný dôkaz.`,
       };
     });
   }
 
+  // Fallback when no rubric provided
   return [
     {
       criterion: 'relevantnosť',
-      result: result(signals.solutionSignals > 0, signals.score >= 45),
+      result: result(signals.score >= 60, signals.score >= 40),
       explanation:
-        signals.solutionSignals > 0
+        signals.score >= 60
           ? 'Odovzdanie reaguje na zadanie a naznačuje konkrétny krok.'
           : 'Odovzdanie zatiaľ jasne nereaguje na zadanie.',
     },
     {
-      criterion: 'dôkazy',
-      result: result(signals.hasEvidence && signals.evidenceSignals > 0, signals.hasEvidence),
+      criterion: 'jasnosť pomenovania',
+      result: result(signals.score >= 55 && countKeywords(signals.combined, PROBLEM_KEYWORDS) > 0, signals.score >= 35),
+      explanation:
+        countKeywords(signals.combined, PROBLEM_KEYWORDS) > 0
+          ? 'Žiak pomenoval problém alebo situáciu.'
+          : 'Pomenovaný problém nie je dostatočne jasný.',
+    },
+    {
+      criterion: 'konkrétnosť návrhu',
+      result: result(countKeywords(signals.combined, SOLUTION_KEYWORDS) >= 2, countKeywords(signals.combined, SOLUTION_KEYWORDS) >= 1),
+      explanation:
+        countKeywords(signals.combined, SOLUTION_KEYWORDS) >= 1
+          ? 'Žiak naznačil konkrétny návrh alebo riešenie.'
+          : 'Chýba konkrétny návrh alebo prvý krok.',
+    },
+    {
+      criterion: 'dôkaz splnenia',
+      result: result(signals.hasEvidence, signals.score >= 40),
       explanation: signals.hasEvidence
-        ? 'Žiak pripojil podporný dôkaz.'
-        : 'Chýba podporný dôkaz – vhodné pre učiteľské posúdenie.',
+        ? 'Dôkaz bol priložený.'
+        : 'Chýba podporný dôkaz — vhodné pre učiteľské posúdenie.',
+    },
+    {
+      criterion: 'reflexia / ďalší krok',
+      result: result(countKeywords(signals.combined, REFLECTION_KEYWORDS) >= 1, signals.score >= 50),
+      explanation:
+        countKeywords(signals.combined, REFLECTION_KEYWORDS) >= 1
+          ? 'Odovzdanie obsahuje reflexiu alebo ďalší krok.'
+          : 'Reflexia alebo ďalší krok nie sú prítomné.',
     },
   ];
 }
 
 function buildDetectedCompetencies(
   context: AIValidationContext,
-  signals: { evidenceSignals: number; solutionSignals: number; reflectionSignals: number },
+  signals: {
+    evidenceSignals: number;
+    solutionSignals: number;
+    reflectionSignals: number;
+    communitySignals: number;
+    problemSignals: number;
+  },
 ): DetectedCompetency[] {
   const targets = context.targetCompetencies ?? [];
+
   const strengthFor = (id: string): number => {
-    if (id.includes('fact')) return clamp(0.3 + signals.evidenceSignals * 0.2, 0, 1);
-    if (id.includes('maker') || id.includes('solution')) return clamp(0.3 + signals.solutionSignals * 0.2, 0, 1);
-    if (id.includes('self') || id.includes('captain')) return clamp(0.3 + signals.reflectionSignals * 0.2, 0, 1);
-    return 0.4;
+    if (id.includes('fact')) return clamp(0.25 + signals.evidenceSignals * 0.18 + signals.problemSignals * 0.1, 0, 1);
+    if (id.includes('maker') || id.includes('solution')) return clamp(0.25 + signals.solutionSignals * 0.18, 0, 1);
+    if (id.includes('self') || id.includes('captain')) return clamp(0.25 + signals.reflectionSignals * 0.18, 0, 1);
+    if (id.includes('community') || id.includes('hero')) return clamp(0.25 + signals.communitySignals * 0.15, 0, 1);
+    if (id.includes('team')) return clamp(0.3 + signals.communitySignals * 0.12, 0, 1);
+    if (id.includes('planet')) return clamp(0.2 + signals.evidenceSignals * 0.12, 0, 1);
+    if (id.includes('resource')) return clamp(0.2 + signals.solutionSignals * 0.1, 0, 1);
+    return 0.35;
   };
 
   return targets.map((id) => ({
