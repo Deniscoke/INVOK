@@ -12,6 +12,12 @@
  * callers and tests do not change.
  */
 import type { SubmissionInput } from '../validators/submissionValidator';
+import { getServerEnv, shouldUseAnthropic } from '../lib/env';
+import { getMissionById, getCompetencies } from './missionService';
+import { AI_VALIDATION_SYSTEM_PROMPT, buildValidationPrompt, type ValidationPromptInput } from '../prompts/aiValidationPrompt';
+import { parseAIValidationResult } from '../validators/aiValidationResultValidator';
+
+export type AISource = 'mock' | 'anthropic' | 'mock_fallback';
 
 export interface AIReason {
   criterion: string;
@@ -33,6 +39,7 @@ export interface AIValidationResult {
   detectedCompetencies: DetectedCompetency[];
   suggestedTeacherReview: boolean;
   model: string;
+  source: AISource;
 }
 
 export interface AIValidationContext {
@@ -98,6 +105,88 @@ export async function validateSubmission(
   return mockEvaluate(input, context);
 }
 
+/** Deterministic offline mock (alias of validateSubmission). */
+export const mockValidateSubmission = validateSubmission;
+
+/**
+ * Provider-aware entry point. Uses the real Anthropic provider only when
+ * `AI_VALIDATION_PROVIDER=anthropic` AND an API key + model are configured;
+ * otherwise stays on the mock. Never throws — AI failures degrade safely.
+ */
+export async function validateSubmissionWithAI(
+  input: SubmissionInput,
+  context: AIValidationContext = {},
+): Promise<AIValidationResult> {
+  const env = getServerEnv();
+  if (shouldUseAnthropic(env)) {
+    return anthropicValidateSubmission(input, context);
+  }
+  return mockEvaluate(input, context);
+}
+
+/** Build a privacy-safe prompt input (mission + work text only, no PII). */
+function buildPromptInput(input: SubmissionInput, context: AIValidationContext): ValidationPromptInput {
+  const mission = getMissionById(input.missionId);
+  const rubric = (context.rubric ?? mission?.rubric ?? []).map((c) => ({
+    criterion: c.label,
+    description: c.description,
+  }));
+  const targetIds = context.targetCompetencies ?? mission?.targetCompetencies ?? [];
+  const competencies = getCompetencies();
+  const targetCompetencies = targetIds.map((id) => {
+    const comp = competencies.find((c) => c.id === id);
+    return { id, childName: comp?.childName ?? id, teacherDescription: comp?.teacherDescription };
+  });
+  return {
+    missionTitle: mission?.title ?? input.missionId,
+    missionGoal: mission?.goal ?? '',
+    rubric,
+    evidenceText: input.evidenceText || input.studentResponse,
+    evidenceType: 'text',
+    targetCompetencies,
+  };
+}
+
+/**
+ * Real Anthropic provider. Sends ONLY mission metadata + the work text — no
+ * student name/email/IDs/tokens. On any failure, falls back to the mock
+ * scorer with `source: 'mock_fallback'`, so the submission workflow never
+ * breaks because of the AI.
+ */
+export async function anthropicValidateSubmission(
+  input: SubmissionInput,
+  context: AIValidationContext = {},
+): Promise<AIValidationResult> {
+  const env = getServerEnv();
+  try {
+    const { getAnthropicClient } = await import('../lib/anthropicClient');
+    const client = getAnthropicClient();
+    if (!client) {
+      return { ...mockEvaluate(input, context), source: 'mock_fallback' };
+    }
+
+    const prompt = buildValidationPrompt(buildPromptInput(input, context));
+    const message = await client.messages.create(
+      {
+        model: env.aiValidationModel,
+        max_tokens: 700,
+        system: AI_VALIDATION_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      { timeout: env.aiValidationTimeoutMs },
+    );
+
+    const text = message.content.map((block) => (block.type === 'text' ? block.text : '')).join('');
+    const parsed = parseAIValidationResult(text, env.aiValidationModel);
+    return parsed.ok
+      ? { ...parsed.value, source: 'anthropic' }
+      : { ...parsed.fallback, source: 'mock_fallback' };
+  } catch {
+    // Network/timeout/SDK error — degrade safely, never break the workflow.
+    return { ...mockEvaluate(input, context), source: 'mock_fallback' };
+  }
+}
+
 function mockEvaluate(input: SubmissionInput, context: AIValidationContext): AIValidationResult {
   const combined = `${input.studentResponse}\n${input.evidenceText}`;
   const length = input.studentResponse.trim().length;
@@ -149,6 +238,7 @@ function mockEvaluate(input: SubmissionInput, context: AIValidationContext): AIV
     detectedCompetencies,
     suggestedTeacherReview,
     model: MOCK_MODEL,
+    source: 'mock',
   };
 }
 

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { validateSubmissionInput } from '../../backend/validators/submissionValidator';
-import { validateSubmission } from '../../backend/services/aiValidationService';
+import { validateSubmissionWithAI } from '../../backend/services/aiValidationService';
 import { getMissionById } from '../../backend/services/missionService';
 import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
 import { getServerEnv, missingServerSecrets } from '../../backend/lib/env';
@@ -11,10 +11,10 @@ import { getServerEnv, missingServerSecrets } from '../../backend/lib/env';
  * Two modes:
  *   1. Inline: { missionId, studentResponse, evidenceText, evidenceType }
  *      → validate in-memory, return result (no DB write).
- *   2. By ID: { submissionId }
- *      → load submission from DB, run mock AI validation, write to ai_evaluations.
+ *   2. By ID: { submissionId } → load submission, run provider, persist.
  *
- * AI is FORMATIVE — never a final grader. Teacher stays the guarantor.
+ * Uses mock or real Anthropic provider based on env (see aiValidationService).
+ * Returns safe metadata only — never the raw prompt, API key, or internals.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       if (!sub) { res.status(404).json({ error: 'Odovzdanie nenájdené.' }); return; }
       const row = sub as Record<string, unknown>;
       const mission = getMissionById(String(row.mission_id));
-      const evaluation = await validateSubmission(
+      const evaluation = await validateSubmissionWithAI(
         { missionId: String(row.mission_id), studentResponse: String(row.response_text), evidenceText: String(row.evidence_text ?? ''), evidenceType: 'text' },
         { rubric: mission?.rubric, targetCompetencies: mission?.targetCompetencies },
       );
@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         suggested_teacher_review: evaluation.suggestedTeacherReview, model: evaluation.model,
       }, { onConflict: 'submission_id' });
       await admin.from('submissions').update({ status: 'ai_reviewed' }).eq('id', String(row.id));
-      res.status(200).json(evaluation);
+      res.status(200).json({ source: evaluation.source, model: evaluation.model, evaluation });
     } catch {
       res.status(500).json({ error: 'Validácia zlyhala.', suggestedTeacherReview: true });
     }
@@ -78,11 +78,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const mission = getMissionById(parsed.value.missionId);
-    const evaluation = await validateSubmission(parsed.value, {
+    const evaluation = await validateSubmissionWithAI(parsed.value, {
       rubric: mission?.rubric,
       targetCompetencies: mission?.targetCompetencies,
     });
-    res.status(200).json(evaluation);
+    res.status(200).json({ source: evaluation.source, model: evaluation.model, evaluation });
   } catch {
     res.status(500).json({ error: 'Validácia zlyhala.', suggestedTeacherReview: true });
   }

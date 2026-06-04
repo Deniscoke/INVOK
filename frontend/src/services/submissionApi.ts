@@ -77,7 +77,9 @@ async function submitMock(payload: SubmissionPayload): Promise<SubmissionResult>
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ missionId: payload.missionId, studentResponse: payload.studentResponse, evidenceText: payload.evidenceText, evidenceType: payload.evidenceType }),
     });
-    const eval_ = (await response.json()) as AiEvaluation;
+    const data = (await response.json()) as { evaluation?: AiEvaluation } & Partial<AiEvaluation>;
+    // Endpoint returns { source, model, evaluation }; tolerate a bare evaluation too.
+    const eval_ = (data.evaluation ?? (data as AiEvaluation));
     return {
       ok: true,
       submissionId: `local-${Date.now()}`,

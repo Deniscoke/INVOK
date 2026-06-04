@@ -12,8 +12,17 @@ konzervatívnejší (minimalizácia dát, obmedzenie účelu, žiadne zbytočné
 | `ANTHROPIC_API_KEY` | len server | **Nikdy** do frontendu. |
 
 - Iba `VITE_`-prefixované premenné Vite vystaví prehliadaču.
-- `backend/lib/supabaseAdmin.ts` je server-only (komentár + automatický test).
+- `backend/lib/supabaseAdmin.ts` a `backend/lib/anthropicClient.ts` sú
+  server-only (komentár + automatické testy `noAiSecretsInFrontend`).
 - Reálny `.env` sa **necommituje** (`.gitignore`); v repe je len `.env.example`.
+
+## Čo sa neposiela do AI
+
+Do Claude/Anthropic posielame iba mission metadata + anonymizovanú prácu žiaka.
+**Nikdy** sa neposiela: meno/email žiaka, názov školy (ak nie nutný), session
+token, access code, Supabase IDs, interné hashe ani API kľúče. Raw prompty sa
+**neukladajú** do DB (`AI_VALIDATION_LOG_RAW_PROMPTS=false`). Detaily:
+[AI_VALIDATION.md](AI_VALIDATION.md).
 
 ## Pseudonymizácia
 

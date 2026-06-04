@@ -77,3 +77,51 @@ export function buildAIValidationPrompt(
     AI_VALIDATION_OUTPUT_SCHEMA,
   ].join('\n');
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4: compact, privacy-safe prompt used by the real Anthropic provider.
+// NOTE: this intentionally carries NO student name/email/IDs/tokens — only
+// mission metadata + the work text + competency definitions.
+// ---------------------------------------------------------------------------
+
+export interface ValidationPromptCompetency {
+  id: string;
+  childName: string;
+  teacherDescription?: string;
+}
+
+export interface ValidationPromptInput {
+  missionTitle: string;
+  missionGoal: string;
+  rubric: { criterion: string; maxPoints?: number; description?: string }[];
+  evidenceText: string;
+  evidenceType: 'text';
+  targetCompetencies: ValidationPromptCompetency[];
+}
+
+export function buildValidationPrompt(input: ValidationPromptInput): string {
+  const rubricLines = input.rubric
+    .map((c) => `- ${c.criterion}${c.maxPoints ? ` (max ${c.maxPoints})` : ''}: ${c.description ?? ''}`)
+    .join('\n');
+
+  const competencyLines = input.targetCompetencies
+    .map((c) => `- ${c.id} (${c.childName})${c.teacherDescription ? `: ${c.teacherDescription}` : ''}`)
+    .join('\n');
+
+  return [
+    `MISIA: ${input.missionTitle}`,
+    `CIEĽ: ${input.missionGoal}`,
+    '',
+    'RUBRIKA:',
+    rubricLines || '(bez rubriky)',
+    '',
+    'KOMPETENCIE:',
+    competencyLines || '(žiadne)',
+    '',
+    `ODPOVEĎ ŽIAKA (${input.evidenceType}):`,
+    input.evidenceText || '(prázdne)',
+    '',
+    'Vyhodnoť odovzdanie len podľa rubriky a dôkazov. Vráť IBA JSON v tomto tvare:',
+    AI_VALIDATION_OUTPUT_SCHEMA,
+  ].join('\n');
+}

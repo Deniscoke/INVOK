@@ -64,7 +64,16 @@ npm run typecheck   # tsc --noEmit
 - Detaily: [docs/SECURITY.md](docs/SECURITY.md), migrácia
   `supabase/migrations/002_auth_and_student_access.sql`.
 
+## AI validácia (mock / Claude)
+
+- Default je **mock** (offline, bez API nákladov). AI je vždy **formatívna**,
+  nie finálny známkovač — učiteľ je garant.
+- Reálne Claude volanie zapneš na serveri: `AI_VALIDATION_PROVIDER=anthropic`
+  + `ANTHROPIC_API_KEY` + `AI_VALIDATION_MODEL`. Bez kľúča sa použije mock.
+- Do AI sa **neposielajú osobné údaje**; raw prompty sa neukladajú. Detaily:
+  [docs/AI_VALIDATION.md](docs/AI_VALIDATION.md).
+
 ## Ďalšie kroky
 
-Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 3 — reálne CRUD misií
-a odovzdaní cez Supabase.
+Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 5 — teacher review
+workflow (učiteľ potvrdí/upraví AI návrh).

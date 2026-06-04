@@ -16,7 +16,7 @@
  */
 import type { RequestContext } from '../lib/requestContext';
 import type { SubmissionInput, SubmissionQueryFilter } from '../validators/submissionValidator';
-import { validateSubmission } from './aiValidationService';
+import { validateSubmissionWithAI } from './aiValidationService';
 import { getMissionById } from './missionService';
 import { applyXp, levelForXp } from './progressService';
 import { getServerEnv, missingServerSecrets } from '../lib/env';
@@ -113,7 +113,7 @@ export async function getStudentProgress(ctx: RequestContext): Promise<{
 
 async function mockCreate(ctx: RequestContext, input: SubmissionInput): Promise<CreateResult> {
   const mission = getMissionById(input.missionId);
-  const evaluation = await validateSubmission(
+  const evaluation = await validateSubmissionWithAI(
     { ...input, studentResponse: input.evidenceText || input.studentResponse },
     { rubric: mission?.rubric, targetCompetencies: mission?.targetCompetencies },
   );
@@ -226,7 +226,7 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
     const submissionId = String((sub as Record<string, unknown>).id);
 
     // Run mock AI validation
-    const evaluation = await validateSubmission(
+    const evaluation = await validateSubmissionWithAI(
       { missionId: input.missionId, studentResponse: input.studentResponse, evidenceText: input.evidenceText, evidenceType: input.evidenceType },
       { rubric: mission?.rubric, targetCompetencies: mission?.targetCompetencies },
     );
