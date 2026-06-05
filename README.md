@@ -73,6 +73,9 @@ npm run typecheck   # tsc --noEmit
   JSON). Bez kľúča sa použije mock.
 - Do AI sa **neposielajú osobné údaje**; raw prompty sa neukladajú. Detaily:
   [docs/AI_VALIDATION.md](docs/AI_VALIDATION.md).
+- **Rate limiting + cost guard:** AI endpointy majú per-identity limit (žiak/učiteľ),
+  denné limity a 429 odpoveď; anonymný používateľ beží len na mocku. In-memory MVP —
+  produkčne Redis/Upstash. Viď [docs/SECURITY.md](docs/SECURITY.md).
 - **Učiteľ je garant:** AI dá návrh, učiteľ ho potvrdí/upraví/vráti/zamietne
   (`teacher_reviews`, auditovateľné). **Finálne XP sa pripíše až po
   učiteľskom schválení** (approve/adjust).

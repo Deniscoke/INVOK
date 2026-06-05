@@ -101,6 +101,15 @@ commitne až po review** (approve/adjust) — viď
 *„čaká na učiteľské potvrdenie"* a po review finálnu spätnú väzbu učiteľa
 v detsky zrozumiteľnom jazyku.
 
+## Rate limiting a cost guard
+
+AI endpointy (`/api/ai/validate-submission`, `/api/submissions`) sú chránené
+per-identity rate limitom (žiak prísnejšie ako učiteľ) a dennými limitmi
+(rolling 24 h). Pri prekročení → **HTTP 429** s `retryAfterMs`. Cost guard:
+anonymný používateľ beží len na mocku, príliš krátky text nespustí volanie, text
+sa oreže na `AI_MAX_EVIDENCE_CHARS`. Detaily a env premenné:
+[SECURITY.md](SECURITY.md). In-memory limiter je MVP — produkčne Redis/Upstash.
+
 ## Validácia vstupu
 
 `backend/validators/submissionValidator.ts` overuje min/max dĺžku textu a

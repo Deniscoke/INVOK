@@ -112,17 +112,24 @@ export async function validateSubmission(
 /** Deterministic offline mock (alias of validateSubmission). */
 export const mockValidateSubmission = validateSubmission;
 
+export interface AIValidationOptions {
+  /** Force the mock provider (e.g. anonymous callers must not spend OpenAI credit). */
+  forceMock?: boolean;
+}
+
 /**
  * Provider-aware entry point. Uses the real OpenAI provider only when
- * `OPENAI_VALIDATION_PROVIDER=openai` AND an API key + model are configured;
- * otherwise stays on the mock. Never throws — AI failures degrade safely.
+ * `OPENAI_VALIDATION_PROVIDER=openai` AND an API key + model are configured AND
+ * the caller did not force mock; otherwise stays on the mock. Never throws —
+ * AI failures degrade safely.
  */
 export async function validateSubmissionWithAI(
   input: SubmissionInput,
   context: AIValidationContext = {},
+  options: AIValidationOptions = {},
 ): Promise<AIValidationResult> {
   const env = getServerEnv();
-  if (shouldUseOpenAI(env)) {
+  if (!options.forceMock && shouldUseOpenAI(env)) {
     return openAIValidateSubmission(input, context);
   }
   return mockEvaluate(input, context);
@@ -169,7 +176,19 @@ export async function openAIValidateSubmission(
       return { ...mockEvaluate(input, context), source: 'mock_fallback' };
     }
 
-    const prompt = buildValidationPrompt(buildPromptInput(input, context));
+    // Cost guard: don't spend an API call on too-short evidence.
+    const evidence = (input.evidenceText || input.studentResponse).trim();
+    if (evidence.length < env.aiMinEvidenceChars) {
+      return { ...mockEvaluate(input, context), source: 'mock_fallback' };
+    }
+
+    // Cost guard: cap characters sent to the model (defence-in-depth vs the validator).
+    const capped: SubmissionInput = {
+      ...input,
+      studentResponse: input.studentResponse.slice(0, env.aiMaxEvidenceChars),
+      evidenceText: input.evidenceText.slice(0, env.aiMaxEvidenceChars),
+    };
+    const prompt = buildValidationPrompt(buildPromptInput(capped, context));
     const response = await client.responses.create(
       {
         model: env.openaiValidationModel,

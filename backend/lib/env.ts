@@ -21,6 +21,14 @@ export interface ServerEnv {
   maxUploadMb: number;
   rateLimitWindowMs: number;
   rateLimitMax: number;
+  // AI rate / cost guard (MVP, in-memory). Conservative defaults.
+  aiRateLimitWindowMs: number;
+  aiRateLimitMaxPerStudent: number;
+  aiRateLimitMaxPerTeacher: number;
+  aiDailyMaxPerStudent: number;
+  aiDailyMaxPerClass: number;
+  aiMaxEvidenceChars: number;
+  aiMinEvidenceChars: number;
 }
 
 function positiveInt(value: string | undefined, fallback: number): number {
@@ -42,6 +50,13 @@ export function getServerEnv(): ServerEnv {
     maxUploadMb: positiveInt(env.MAX_UPLOAD_MB, 8),
     rateLimitWindowMs: positiveInt(env.RATE_LIMIT_WINDOW_MS, 60_000),
     rateLimitMax: positiveInt(env.RATE_LIMIT_MAX, 30),
+    aiRateLimitWindowMs: positiveInt(env.AI_RATE_LIMIT_WINDOW_MS, 60_000),
+    aiRateLimitMaxPerStudent: positiveInt(env.AI_RATE_LIMIT_MAX_PER_STUDENT, 5),
+    aiRateLimitMaxPerTeacher: positiveInt(env.AI_RATE_LIMIT_MAX_PER_TEACHER, 20),
+    aiDailyMaxPerStudent: positiveInt(env.AI_DAILY_MAX_PER_STUDENT, 30),
+    aiDailyMaxPerClass: positiveInt(env.AI_DAILY_MAX_PER_CLASS, 300),
+    aiMaxEvidenceChars: positiveInt(env.AI_MAX_EVIDENCE_CHARS, 5_000),
+    aiMinEvidenceChars: positiveInt(env.AI_MIN_EVIDENCE_CHARS, 20),
   };
 }
 

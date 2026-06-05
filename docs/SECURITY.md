@@ -81,7 +81,30 @@ Supabase domény cez `connect-src`), `Referrer-Policy`,
 > štýlom v MVP. Pri tvrdení produkcie presunúť inline štýly do tried a
 > `'unsafe-inline'` odstrániť.
 
-## Rate limiting
+## Rate limiting a cost guard (AI)
 
-Pripravené premenné `RATE_LIMIT_WINDOW_MS` a `RATE_LIMIT_MAX` pre budúce
-obmedzenie AI endpointu.
+Chránené endpointy: `POST /api/ai/validate-submission` a `POST /api/submissions`.
+
+**Rate limit** (`backend/lib/rateLimit.ts`, in-memory MVP) podľa identity
+z `requestContext`:
+
+| Tier | Per-window (default 60 s) | Denne (rolling 24 h) |
+|---|---|---|
+| Žiak (session/auth) | `AI_RATE_LIMIT_MAX_PER_STUDENT` = 5 | `AI_DAILY_MAX_PER_STUDENT` = 30 + trieda `AI_DAILY_MAX_PER_CLASS` = 300 |
+| Učiteľ/admin | `AI_RATE_LIMIT_MAX_PER_TEACHER` = 20 | — |
+| Anonymný | limit ako žiak (kľúč = **hash IP**) | — |
+
+Pri prekročení → **HTTP 429** `{ error:'RATE_LIMITED', message, retryAfterMs }`
++ `Retry-After`. Bez secrets. IP sa **nikdy neukladá v plaintexte** (len hash).
+
+**Cost guard** (OpenAI náklady):
+
+- anonymný používateľ **nikdy** nespustí reálne OpenAI volanie (force mock),
+- príliš krátky text (< `AI_MIN_EVIDENCE_CHARS`) → mock, neplytvá volaním,
+- text sa pred odoslaním oreže na `AI_MAX_EVIDENCE_CHARS`,
+- reálne OpenAI len ak je `OPENAI_VALIDATION_PROVIDER=openai` + key + model,
+- raw prompty sa neukladajú.
+
+> ⚠️ **Limit MVP:** in-memory limiter je **per-instance** (Vercel Fluid Compute
+> ho drží na teplej inštancii, ale nie globálne). Pre produkciu: **Redis/Upstash**
+> alebo Supabase-backed limiter. Denné limity sú tiež in-memory (dočasné).

@@ -3,6 +3,7 @@ import { validateSubmissionInput } from '../../backend/validators/submissionVali
 import { validateSubmissionWithAI } from '../../backend/services/aiValidationService';
 import { getMissionById } from '../../backend/services/missionService';
 import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
+import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit';
 import { getServerEnv, missingServerSecrets } from '../../backend/lib/env';
 
 /**
@@ -13,8 +14,9 @@ import { getServerEnv, missingServerSecrets } from '../../backend/lib/env';
  *      → validate in-memory, return result (no DB write).
  *   2. By ID: { submissionId } → load submission, run provider, persist.
  *
- * Uses mock or real OpenAI provider based on env (see aiValidationService).
- * Returns safe metadata only — never the raw prompt, API key, or internals.
+ * Protected by per-identity rate limiting. Anonymous callers are served by the
+ * mock only (never spend OpenAI credit). Returns safe metadata only — never the
+ * raw prompt, API key, or internals.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
@@ -25,9 +27,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const body = (req.body ?? {}) as Record<string, unknown>;
 
-  // Mode 2: validate an existing submission by ID
+  // Identity + rate limit (applies to mock and openai alike).
+  const ctx = await resolveContext(req);
+  const decision = enforceAiRateLimit(ctx, ipHashFromHeader(req.headers['x-forwarded-for']));
+  if (!decision.allowed) {
+    res.setHeader('Retry-After', String(Math.ceil(decision.retryAfterMs / 1000)));
+    res.status(429).json({ error: 'RATE_LIMITED', message: 'Skús to znova o chvíľu.', retryAfterMs: decision.retryAfterMs });
+    return;
+  }
+
+  // Mode 2: validate an existing submission by ID (requires auth)
   if (body.submissionId) {
-    const ctx = await resolveContext(req);
     if (!requireAuth(ctx)) {
       res.status(401).json({ error: 'Nie si prihlásený.' });
       return;
@@ -69,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // Mode 1: inline validation (no DB write)
+  // Mode 1: inline validation (no DB write). Anonymous → force mock.
   const parsed = validateSubmissionInput(body);
   if (!parsed.ok) {
     res.status(400).json({ error: 'Neplatné vstupy.', issues: parsed.issues });
@@ -78,10 +88,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const mission = getMissionById(parsed.value.missionId);
-    const evaluation = await validateSubmissionWithAI(parsed.value, {
-      rubric: mission?.rubric,
-      targetCompetencies: mission?.targetCompetencies,
-    });
+    const evaluation = await validateSubmissionWithAI(
+      parsed.value,
+      { rubric: mission?.rubric, targetCompetencies: mission?.targetCompetencies },
+      { forceMock: ctx.mode === 'anonymous' },
+    );
     res.status(200).json({ source: evaluation.source, model: evaluation.model, evaluation });
   } catch {
     res.status(500).json({ error: 'Validácia zlyhala.', suggestedTeacherReview: true });

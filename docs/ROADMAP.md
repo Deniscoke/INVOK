@@ -22,5 +22,8 @@ admin systém.
 
 **Fáza 6 — školský dashboard.** Agregovaný anonymizovaný/pseudonymizovaný
 progres triedy a školy z `teacher_reviews` + `user_progress` (pre školského
-admina). Pridať rate limiting na AI endpoint a cost safeguards. Voliteľne
-naviazať žiaka na `auth.users` cez `signInAnonymously` pre priame RLS čítanie.
+admina). Voliteľne naviazať žiaka na `auth.users` cez `signInAnonymously` pre
+priame RLS čítanie.
+
+> Hotové (5.1): AI **rate limiting** + **cost guard** (in-memory MVP). Produkčne
+> nahradiť Redis/Upstash alebo Supabase-backed limiterom.

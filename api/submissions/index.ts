@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
+import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit';
 import { validateSubmissionInput } from '../../backend/validators/submissionValidator';
 import { createSubmission } from '../../backend/services/submissionService';
 
@@ -19,6 +20,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const ctx = await resolveContext(req);
   if (!requireAuth(ctx)) {
     res.status(401).json({ error: 'Nie si prihlásený.' });
+    return;
+  }
+
+  // Rate limit (submission triggers AI validation → protect cost + runtime).
+  const decision = enforceAiRateLimit(ctx, ipHashFromHeader(req.headers['x-forwarded-for']));
+  if (!decision.allowed) {
+    res.setHeader('Retry-After', String(Math.ceil(decision.retryAfterMs / 1000)));
+    res.status(429).json({ error: 'RATE_LIMITED', message: 'Skús to znova o chvíľu.', retryAfterMs: decision.retryAfterMs });
     return;
   }
 
