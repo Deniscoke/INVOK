@@ -54,5 +54,8 @@ export function ProgressSummary(data: ProgressData): string {
       <div class="progress" style="margin-top:6px"><div class="progress__fill" style="width:${pct}%"></div></div>
     </div>
     ${rows ? `<div style="margin-top:var(--space-4)">${rows}</div>` : ''}
+    <p class="muted" style="margin:var(--space-3) 0 0;font-size:var(--fs-xs)">
+      Tip: XP získaš aj za <strong>kvalitný návrh problému</strong> — nielen za vyriešenie celej misie.
+    </p>
   </div>`;
 }

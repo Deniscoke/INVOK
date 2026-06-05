@@ -11,6 +11,9 @@ export type EvidenceType = (typeof ALLOWED_EVIDENCE_TYPES)[number];
 export const ALLOWED_STATUSES = ['submitted', 'ai_reviewed', 'teacher_reviewed', 'approved', 'needs_revision'] as const;
 export type SubmissionStatus = (typeof ALLOWED_STATUSES)[number];
 
+export const SUBMISSION_KINDS = ['problem_proposal', 'solution_submission', 'reflection'] as const;
+export type SubmissionKind = (typeof SUBMISSION_KINDS)[number];
+
 export const SUBMISSION_LIMITS = {
   missionIdMax: 80,
   responseMin: 20,
@@ -36,6 +39,7 @@ export interface SubmissionInput {
   evidenceText: string;
   evidenceType: EvidenceType;
   classId?: string;
+  submissionKind?: SubmissionKind;
 }
 
 export interface SubmissionQueryFilter {
@@ -126,6 +130,15 @@ export function validateSubmissionInput(raw: unknown): SubmissionValidationResul
     }
   }
 
+  let submissionKind: SubmissionKind = 'solution_submission';
+  if (body.submissionKind !== undefined) {
+    if (!(SUBMISSION_KINDS as readonly string[]).includes(body.submissionKind as string)) {
+      issues.push({ field: 'submissionKind', message: `submissionKind musí byť: ${SUBMISSION_KINDS.join(', ')}.` });
+    } else {
+      submissionKind = body.submissionKind as SubmissionKind;
+    }
+  }
+
   if (issues.length > 0) {
     return { ok: false, issues };
   }
@@ -138,6 +151,7 @@ export function validateSubmissionInput(raw: unknown): SubmissionValidationResul
       evidenceText,
       evidenceType: body.evidenceType as EvidenceType,
       classId: typeof classId === 'string' ? classId.trim() : undefined,
+      submissionKind,
     },
   };
 }

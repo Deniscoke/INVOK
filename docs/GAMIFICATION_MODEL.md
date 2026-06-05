@@ -49,6 +49,19 @@ Pravidlo (`progressService.finalXpForReview`): `XP = baseXp × finalScore/100`
 pre approved/adjusted, inak 0. Každý zisk XP je tak dohľadateľný k jednému
 záznamu v `teacher_reviews` (audit trail pre školu/grant).
 
+## Odmena za návrh problému (podnikavosť)
+
+Žiak dostane odmenu aj za **prvú fázu podnikavého procesu** — kvalitné
+pomenovanie problému, nie len za vyriešenie celej misie. Návrh problému
+(`submission_kind = 'problem_proposal'`) sa hodnotí samostatnou **problem
+rubrikou** (jasnosť, konkrétnosť, dôkaz/pozorovanie, koho sa týka, prvý návrh,
+dopad, všímavosť) a získa **predbežné XP = 10–40 %** základného XP misie podľa
+kvality (`progressService.problemProposalXp`).
+
+Predbežné XP sa **nezapočíta definitívne** — potvrdí ho učiteľský review (rovnaký
+dvojfázový commit). Pri chýbajúcom dôkaze AI odporučí učiteľské posúdenie. Rubrika
+zámerne odmeňuje **dôkaz a konkrétnosť**, aby nemotivovala k vymýšľaniu problémov.
+
 ## Mastery
 
 `user_progress.mastery` (0–1) je **formatívny signál** zvládnutia kompetencie,

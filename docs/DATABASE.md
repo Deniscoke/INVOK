@@ -70,6 +70,19 @@ reviewer / správca triedy (`manages_submission()`) / vlastník odovzdania
 commituje server (`teacherReviewService.applyReviewToSubmission`) po
 approve/adjust.
 
+## Problem proposal (migrácia 005)
+
+`submissions` rozšírené (Variant A — bez paralelného systému):
+
+| Stĺpec | Účel |
+|---|---|
+| `submission_kind` | `problem_proposal` / `solution_submission` / `reflection`. |
+| `problem_quality_score` | Kvalita návrhu problému (0–100), null pre iné. |
+| `problem_reward_xp` | Predbežná odmena za návrh (commit až po teacher review). |
+
+Bez osobných údajov. Scoring: `problemProposalService` +
+`progressService.problemProposalXp` (10–40 % základného XP misie).
+
 ## Otvorené otázky / limity
 
 - Žiaci zatiaľ **nie sú viazaní na `auth.users`**; priame čítanie pod RLS pre

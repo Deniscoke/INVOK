@@ -13,7 +13,7 @@ import { getServerEnv, missingServerSecrets } from '../../backend/lib/env';
  *      → validate in-memory, return result (no DB write).
  *   2. By ID: { submissionId } → load submission, run provider, persist.
  *
- * Uses mock or real Anthropic provider based on env (see aiValidationService).
+ * Uses mock or real OpenAI provider based on env (see aiValidationService).
  * Returns safe metadata only — never the raw prompt, API key, or internals.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {

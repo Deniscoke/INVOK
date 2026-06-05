@@ -78,6 +78,17 @@ export function finalXpForReview(baseXp: number, finalScore: number, decision: R
 }
 
 /**
+ * Provisional reward for a QUALITY problem proposal (first phase of the
+ * entrepreneurial process). Scales from 10% (low quality) to 40% (high quality)
+ * of the mission's base XP. Rewarding the process — not only the final result.
+ * Final XP is still gated by a teacher review.
+ */
+export function problemProposalXp(baseXp: number, qualityScore: number): number {
+  const score = Math.min(100, Math.max(0, qualityScore));
+  return Math.round(Math.max(0, baseXp) * (0.1 + 0.3 * (score / 100)));
+}
+
+/**
  * Apply earned XP to a competency progress record, recomputing the level.
  * `masteryDelta` nudges the mastery estimate (clamped to [0,1]); mastery is a
  * formative signal, not a grade.

@@ -79,7 +79,7 @@ export function buildAIValidationPrompt(
 }
 
 // ---------------------------------------------------------------------------
-// Phase 4: compact, privacy-safe prompt used by the real Anthropic provider.
+// Compact, privacy-safe prompt used by the real OpenAI provider.
 // NOTE: this intentionally carries NO student name/email/IDs/tokens — only
 // mission metadata + the work text + competency definitions.
 // ---------------------------------------------------------------------------
@@ -125,3 +125,45 @@ export function buildValidationPrompt(input: ValidationPromptInput): string {
     AI_VALIDATION_OUTPUT_SCHEMA,
   ].join('\n');
 }
+
+/**
+ * Strict JSON schema for OpenAI Responses API structured output.
+ * Mirrors `AIValidationResult` (minus `model`/`source`, set server-side).
+ */
+export const AI_VALIDATION_JSON_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    valid: { type: 'boolean' },
+    score: { type: 'number' },
+    confidence: { type: 'number' },
+    reasons: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          criterion: { type: 'string' },
+          result: { type: 'string', enum: ['met', 'partial', 'unmet'] },
+          explanation: { type: 'string' },
+        },
+        required: ['criterion', 'result', 'explanation'],
+      },
+    },
+    detectedCompetencies: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          id: { type: 'string' },
+          strength: { type: 'number' },
+          evidence: { type: 'string' },
+        },
+        required: ['id', 'strength', 'evidence'],
+      },
+    },
+    suggestedTeacherReview: { type: 'boolean' },
+  },
+  required: ['valid', 'score', 'confidence', 'reasons', 'detectedCompetencies', 'suggestedTeacherReview'],
+};

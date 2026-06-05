@@ -41,7 +41,7 @@ používanie AI v škole.
 nízka, chýba dôkaz, alebo je skóre hraničné. **Pri neistote vždy preferuj
 učiteľa.**
 
-## Provider: mock vs. anthropic
+## Provider: mock vs. openai
 
 `backend/services/aiValidationService.ts` podporuje dvoch providerov cez
 `validateSubmissionWithAI(input, context)`:
@@ -49,19 +49,21 @@ učiteľa.**
 | Provider | Kedy sa použije | `source` |
 |---|---|---|
 | **mock** (default) | vždy, ak nie je splnené nižšie | `mock` |
-| **anthropic** | `AI_VALIDATION_PROVIDER=anthropic` **a** je nastavený `ANTHROPIC_API_KEY` **a** `AI_VALIDATION_MODEL` | `anthropic` |
+| **openai** | `OPENAI_VALIDATION_PROVIDER=openai` **a** je nastavený `OPENAI_API_KEY` **a** `OPENAI_VALIDATION_MODEL` | `openai` |
 
 **Prepínanie:** riadené env premennými (viď nižšie). Bez kľúča alebo s
-`AI_VALIDATION_PROVIDER=mock` ostáva systém na deterministickom mocku.
+`OPENAI_VALIDATION_PROVIDER=mock` ostáva systém na deterministickom mocku.
+OpenAI provider používa **Responses API** so **štruktúrovaným JSON výstupom**
+(strict JSON schema), bez tool use.
 
 ### Env premenné
 
 ```env
-ANTHROPIC_API_KEY=            # server-only, nikdy do frontendu/commitu
-AI_VALIDATION_MODEL=claude-sonnet-4-5
-AI_VALIDATION_PROVIDER=mock   # 'mock' | 'anthropic'
-AI_VALIDATION_TIMEOUT_MS=15000
-AI_VALIDATION_LOG_RAW_PROMPTS=false
+OPENAI_API_KEY=                 # server-only, nikdy do frontendu/commitu
+OPENAI_VALIDATION_MODEL=gpt-5.5
+OPENAI_VALIDATION_PROVIDER=mock # 'mock' | 'openai'
+OPENAI_VALIDATION_TIMEOUT_MS=15000
+OPENAI_VALIDATION_LOG_RAW_PROMPTS=false
 ```
 
 ### Bezpečný fallback
@@ -75,13 +77,13 @@ AI nikdy nesmie pokaziť submission workflow:
   `backend/validators/aiValidationResultValidator.ts` (score 0–100, confidence
   0–1). `suggestedTeacherReview` je vždy `true` pri confidence < 0.75.
 
-### Čo sa posiela do Claude (a čo nie)
+### Čo sa posiela do AI (a čo nie)
 
 Posiela sa len: názov a cieľ misie, rubrika, **anonymizovaná** odpoveď žiaka,
 typ dôkazu a definície cieľových kompetencií. **Neposiela sa** meno/email žiaka,
 session token, access code, Supabase IDs, hashe ani API kľúče. Raw prompty sa do
-DB **neukladajú** (logging vypnutý cez `AI_VALIDATION_LOG_RAW_PROMPTS=false`).
-Prompt je krátky, `max_tokens` nízke, bez tool use.
+DB **neukladajú** (logging vypnutý cez `OPENAI_VALIDATION_LOG_RAW_PROMPTS=false`).
+Prompt je krátky, `max_output_tokens` nízke, bez tool use.
 
 ## Teacher review – AI je len návrh
 

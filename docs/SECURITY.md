@@ -9,16 +9,16 @@ konzervatívnejší (minimalizácia dát, obmedzenie účelu, žiadne zbytočné
 |---|---|---|
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_ENV` | frontend + server | Smie ísť do bundlu (chránené RLS). |
 | `SUPABASE_SERVICE_ROLE_KEY` | len server | Obchádza RLS. **Nikdy** do frontendu. |
-| `ANTHROPIC_API_KEY` | len server | **Nikdy** do frontendu. |
+| `OPENAI_API_KEY` | len server | **Nikdy** do frontendu. |
 
 - Iba `VITE_`-prefixované premenné Vite vystaví prehliadaču.
-- `backend/lib/supabaseAdmin.ts` a `backend/lib/anthropicClient.ts` sú
-  server-only (komentár + automatické testy `noAiSecretsInFrontend`).
+- `backend/lib/supabaseAdmin.ts` a `backend/lib/openaiClient.ts` sú
+  server-only (komentár + automatické testy `noOpenAISecretsInFrontend`).
 - Reálny `.env` sa **necommituje** (`.gitignore`); v repe je len `.env.example`.
 
 ## Čo sa neposiela do AI
 
-Do Claude/Anthropic posielame iba mission metadata + anonymizovanú prácu žiaka.
+Do OpenAI posielame iba mission metadata + anonymizovanú prácu žiaka.
 **Nikdy** sa neposiela: meno/email žiaka, názov školy (ak nie nutný), session
 token, access code, Supabase IDs, interné hashe ani API kľúče. Raw prompty sa
 **neukladajú** do DB (`AI_VALIDATION_LOG_RAW_PROMPTS=false`). Detaily:

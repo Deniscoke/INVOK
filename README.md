@@ -50,7 +50,7 @@ npm run typecheck   # tsc --noEmit
 ## Bezpečnosť (kľúčové)
 
 - `VITE_*` premenné idú do frontendu; `SUPABASE_SERVICE_ROLE_KEY` a
-  `ANTHROPIC_API_KEY` **nikdy** — sú server-only.
+  `OPENAI_API_KEY` **nikdy** — sú server-only.
 - `backend/lib/supabaseAdmin.ts` používa service role key (obchádza RLS) a
   **nesmie** sa importovať do frontend kódu. Test to stráži automaticky.
 - Viac v [docs/SECURITY.md](docs/SECURITY.md).
@@ -64,17 +64,20 @@ npm run typecheck   # tsc --noEmit
 - Detaily: [docs/SECURITY.md](docs/SECURITY.md), migrácia
   `supabase/migrations/002_auth_and_student_access.sql`.
 
-## AI validácia (mock / Claude)
+## AI validácia (mock / OpenAI)
 
 - Default je **mock** (offline, bez API nákladov). AI je vždy **formatívna**,
   nie finálny známkovač — učiteľ je garant.
-- Reálne Claude volanie zapneš na serveri: `AI_VALIDATION_PROVIDER=anthropic`
-  + `ANTHROPIC_API_KEY` + `AI_VALIDATION_MODEL`. Bez kľúča sa použije mock.
+- Reálne OpenAI volanie zapneš na serveri: `OPENAI_VALIDATION_PROVIDER=openai`
+  + `OPENAI_API_KEY` + `OPENAI_VALIDATION_MODEL` (Responses API, štruktúrovaný
+  JSON). Bez kľúča sa použije mock.
 - Do AI sa **neposielajú osobné údaje**; raw prompty sa neukladajú. Detaily:
   [docs/AI_VALIDATION.md](docs/AI_VALIDATION.md).
 - **Učiteľ je garant:** AI dá návrh, učiteľ ho potvrdí/upraví/vráti/zamietne
   (`teacher_reviews`, auditovateľné). **Finálne XP sa pripíše až po
   učiteľskom schválení** (approve/adjust).
+- **Podnikavosť:** žiak získa **predbežné XP (10–40 %)** aj za kvalitný **návrh
+  problému** (`submission_kind='problem_proposal'`), nielen za celé riešenie.
 
 ## Ďalšie kroky
 

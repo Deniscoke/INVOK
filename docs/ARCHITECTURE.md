@@ -32,7 +32,7 @@ Najdôležitejšie pravidlo: **server-only kód sa nikdy nebundluje do frontendu
 ```
 
 V tejto iterácii je AI validácia **mock**, ale kontrakt (`AIValidationResult`)
-je finálny, takže výmena za reálne Claude volanie nemení volajúcich ani testy.
+je finálny, takže výmena za reálne OpenAI volanie nemení volajúcich ani testy.
 
 ## Prečo tento stack
 

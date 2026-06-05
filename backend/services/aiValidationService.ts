@@ -6,18 +6,22 @@
  * (valid / score / confidence / reasons / detectedCompetencies /
  * suggestedTeacherReview).
  *
- * Today it runs a DETERMINISTIC MOCK. The architecture is ready for a real
- * Claude call: build the prompt with `buildAIValidationPrompt`, call the
- * model, parse the JSON, and return the same `AIValidationResult` shape — the
- * callers and tests do not change.
+ * Provider-aware: a deterministic MOCK by default, or a real OpenAI call when
+ * configured via env. Either way it returns the same `AIValidationResult`
+ * shape, so callers and tests do not change.
  */
 import type { SubmissionInput } from '../validators/submissionValidator';
-import { getServerEnv, shouldUseAnthropic } from '../lib/env';
+import { getServerEnv, shouldUseOpenAI } from '../lib/env';
 import { getMissionById, getCompetencies } from './missionService';
-import { AI_VALIDATION_SYSTEM_PROMPT, buildValidationPrompt, type ValidationPromptInput } from '../prompts/aiValidationPrompt';
+import {
+  AI_VALIDATION_SYSTEM_PROMPT,
+  AI_VALIDATION_JSON_SCHEMA,
+  buildValidationPrompt,
+  type ValidationPromptInput,
+} from '../prompts/aiValidationPrompt';
 import { parseAIValidationResult } from '../validators/aiValidationResultValidator';
 
-export type AISource = 'mock' | 'anthropic' | 'mock_fallback';
+export type AISource = 'mock' | 'openai' | 'mock_fallback';
 
 export interface AIReason {
   criterion: string;
@@ -109,8 +113,8 @@ export async function validateSubmission(
 export const mockValidateSubmission = validateSubmission;
 
 /**
- * Provider-aware entry point. Uses the real Anthropic provider only when
- * `AI_VALIDATION_PROVIDER=anthropic` AND an API key + model are configured;
+ * Provider-aware entry point. Uses the real OpenAI provider only when
+ * `OPENAI_VALIDATION_PROVIDER=openai` AND an API key + model are configured;
  * otherwise stays on the mock. Never throws — AI failures degrade safely.
  */
 export async function validateSubmissionWithAI(
@@ -118,8 +122,8 @@ export async function validateSubmissionWithAI(
   context: AIValidationContext = {},
 ): Promise<AIValidationResult> {
   const env = getServerEnv();
-  if (shouldUseAnthropic(env)) {
-    return anthropicValidateSubmission(input, context);
+  if (shouldUseOpenAI(env)) {
+    return openAIValidateSubmission(input, context);
   }
   return mockEvaluate(input, context);
 }
@@ -148,38 +152,47 @@ function buildPromptInput(input: SubmissionInput, context: AIValidationContext):
 }
 
 /**
- * Real Anthropic provider. Sends ONLY mission metadata + the work text — no
- * student name/email/IDs/tokens. On any failure, falls back to the mock
- * scorer with `source: 'mock_fallback'`, so the submission workflow never
- * breaks because of the AI.
+ * Real OpenAI provider (Responses API + strict JSON schema). Sends ONLY mission
+ * metadata + the work text — no student name/email/IDs/tokens. On any failure,
+ * falls back to the mock scorer with `source: 'mock_fallback'`, so the
+ * submission workflow never breaks because of the AI.
  */
-export async function anthropicValidateSubmission(
+export async function openAIValidateSubmission(
   input: SubmissionInput,
   context: AIValidationContext = {},
 ): Promise<AIValidationResult> {
   const env = getServerEnv();
   try {
-    const { getAnthropicClient } = await import('../lib/anthropicClient');
-    const client = getAnthropicClient();
+    const { getOpenAIClient } = await import('../lib/openaiClient');
+    const client = getOpenAIClient();
     if (!client) {
       return { ...mockEvaluate(input, context), source: 'mock_fallback' };
     }
 
     const prompt = buildValidationPrompt(buildPromptInput(input, context));
-    const message = await client.messages.create(
+    const response = await client.responses.create(
       {
-        model: env.aiValidationModel,
-        max_tokens: 700,
-        system: AI_VALIDATION_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: prompt }],
+        model: env.openaiValidationModel,
+        max_output_tokens: 700,
+        input: [
+          { role: 'system', content: AI_VALIDATION_SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'ai_validation_result',
+            strict: true,
+            schema: AI_VALIDATION_JSON_SCHEMA,
+          },
+        },
       },
-      { timeout: env.aiValidationTimeoutMs },
+      { timeout: env.openaiValidationTimeoutMs },
     );
 
-    const text = message.content.map((block) => (block.type === 'text' ? block.text : '')).join('');
-    const parsed = parseAIValidationResult(text, env.aiValidationModel);
+    const parsed = parseAIValidationResult(response.output_text ?? '', env.openaiValidationModel);
     return parsed.ok
-      ? { ...parsed.value, source: 'anthropic' }
+      ? { ...parsed.value, source: 'openai' }
       : { ...parsed.fallback, source: 'mock_fallback' };
   } catch {
     // Network/timeout/SDK error — degrade safely, never break the workflow.

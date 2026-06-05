@@ -63,6 +63,26 @@ export function StudentDashboardPage(): string {
           }
         },
       });
+
+      // Problem proposal form (entrepreneurial first step → provisional reward)
+      const proposalSlot = document.querySelector('#proposal-slot');
+      if (proposalSlot) {
+        const proposalOptions = {
+          mission: activeMission,
+          kind: 'problem_proposal' as const,
+          onResult: (result: SubmissionResult) => {
+            const evalSlot = document.querySelector('#proposal-eval-slot');
+            if (!evalSlot) return;
+            if (result.ok && result.evaluation) {
+              evalSlot.innerHTML = `<div style="margin-top:var(--space-3)">${AiEvaluationCard(result.evaluation, result.xpAwarded ?? 0, null, result.provisional ?? true)}</div>`;
+            } else if (!result.ok) {
+              evalSlot.innerHTML = `<p class="muted" style="color:var(--color-danger)">${result.error}</p>`;
+            }
+          },
+        };
+        proposalSlot.innerHTML = SubmissionForm(proposalOptions);
+        mountSubmissionForm(proposalOptions);
+      }
     };
   }
 
@@ -84,6 +104,12 @@ export function StudentDashboardPage(): string {
       <section>
         <div class="section-title"><h2>Misie</h2></div>
         <div class="grid grid--cards">${missionCards}</div>
+      </section>
+
+      <section>
+        <div class="section-title"><h2>Podnikavý krok</h2><span class="muted">odmena za návrh problému</span></div>
+        <div id="proposal-slot"></div>
+        <div id="proposal-eval-slot"></div>
       </section>
     </div>
 

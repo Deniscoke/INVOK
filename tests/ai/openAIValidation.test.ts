@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateSubmissionWithAI,
-  anthropicValidateSubmission,
+  openAIValidateSubmission,
   mockValidateSubmission,
 } from '../../backend/services/aiValidationService';
 
-// These tests are OFFLINE: no ANTHROPIC_API_KEY / AI_VALIDATION_PROVIDER set,
-// so the anthropic path must fall back safely without any network call.
+// OFFLINE tests: no OPENAI_API_KEY / OPENAI_VALIDATION_PROVIDER set, so the
+// OpenAI path must fall back safely without any network call.
 
 const input = {
   missionId: 'design_solution',
@@ -21,6 +21,8 @@ describe('provider switching (offline)', () => {
     expect(result.source).toBe('mock');
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(100);
+    expect(result.confidence).toBeGreaterThanOrEqual(0);
+    expect(result.confidence).toBeLessThanOrEqual(1);
   });
 
   it('mockValidateSubmission alias returns a mock result', async () => {
@@ -28,8 +30,8 @@ describe('provider switching (offline)', () => {
     expect(result.source).toBe('mock');
   });
 
-  it('anthropic provider without API key falls back safely (no throw, no network)', async () => {
-    const result = await anthropicValidateSubmission(input);
+  it('openAI provider without API key falls back safely (no throw, no network)', async () => {
+    const result = await openAIValidateSubmission(input);
     expect(result.source).toBe('mock_fallback');
     expect(typeof result.valid).toBe('boolean');
     expect(typeof result.suggestedTeacherReview).toBe('boolean');
@@ -40,13 +42,13 @@ describe('provider switching (offline)', () => {
       rubric: [{ id: 'relevance', label: 'Relevantnosť', description: '...' }],
       targetCompetencies: ['maker_venture'],
     });
-    expect(result).toHaveProperty('valid');
-    expect(result).toHaveProperty('score');
-    expect(result).toHaveProperty('confidence');
-    expect(result).toHaveProperty('reasons');
-    expect(result).toHaveProperty('detectedCompetencies');
-    expect(result).toHaveProperty('suggestedTeacherReview');
-    expect(result).toHaveProperty('model');
-    expect(result).toHaveProperty('source');
+    for (const key of ['valid', 'score', 'confidence', 'reasons', 'detectedCompetencies', 'suggestedTeacherReview', 'model', 'source']) {
+      expect(result).toHaveProperty(key);
+    }
+  });
+
+  it('source is never "anthropic" anymore', async () => {
+    const result = await validateSubmissionWithAI(input);
+    expect(result.source).not.toBe('anthropic');
   });
 });

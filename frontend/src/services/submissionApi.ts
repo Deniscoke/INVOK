@@ -6,12 +6,15 @@
  * role key or any hash — those stay server-only.
  */
 
+export type SubmissionKind = 'problem_proposal' | 'solution_submission' | 'reflection';
+
 export interface SubmissionPayload {
   missionId: string;
   studentResponse: string;
   evidenceText: string;
   evidenceType: 'text';
   classId?: string;
+  submissionKind?: SubmissionKind;
 }
 
 export interface AiEvaluation {
@@ -28,6 +31,8 @@ export interface SubmissionResult {
   ok: boolean;
   submissionId?: string;
   xpAwarded?: number;
+  kind?: SubmissionKind;
+  provisional?: boolean;
   evaluation?: AiEvaluation;
   error?: string;
   source: 'api' | 'mock';
@@ -90,6 +95,40 @@ async function submitMock(payload: SubmissionPayload): Promise<SubmissionResult>
   } catch {
     return { ok: false, error: 'Nie je možné odovzdať bez pripojenia.', source: 'mock' };
   }
+}
+
+export interface ProblemProposalFields {
+  missionId: string;
+  title: string;
+  affectedGroup: string;
+  observation: string;
+  evidence: string;
+  firstIdea: string;
+  classId?: string;
+}
+
+/**
+ * Submit a PROBLEM PROPOSAL (first phase of the entrepreneurial process).
+ * Composes the structured fields into the submission text and tags it as a
+ * `problem_proposal` so the server scores it with the problem rubric and grants
+ * provisional reward XP.
+ */
+export async function submitProblemProposal(fields: ProblemProposalFields): Promise<SubmissionResult> {
+  const studentResponse = [
+    `Problém: ${fields.title}`,
+    `Koho sa týka: ${fields.affectedGroup}`,
+    `Čo som si všimol: ${fields.observation}`,
+    `Dôkaz alebo pozorovanie: ${fields.evidence}`,
+    `Prvý nápad na riešenie: ${fields.firstIdea}`,
+  ].join('\n');
+  return submitMission({
+    missionId: fields.missionId,
+    studentResponse,
+    evidenceText: fields.evidence,
+    evidenceType: 'text',
+    classId: fields.classId,
+    submissionKind: 'problem_proposal',
+  });
 }
 
 export async function fetchMySubmissions(): Promise<SubmissionRow[]> {

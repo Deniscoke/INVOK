@@ -44,7 +44,7 @@ describe('no personal data in mock/seed data', () => {
 });
 
 describe('server secrets never appear in frontend sources', () => {
-  it('does not reference the service role or Anthropic keys', () => {
+  it('does not reference the service role or OpenAI keys', () => {
     const frontendDir = resolve(root, 'frontend', 'src');
     const sources = walk(frontendDir)
       .filter((file) => /\.(ts|css|html)$/.test(file))
@@ -52,6 +52,6 @@ describe('server secrets never appear in frontend sources', () => {
       .join('\n');
 
     expect(sources).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
-    expect(sources).not.toContain('ANTHROPIC_API_KEY');
+    expect(sources).not.toContain('OPENAI_API_KEY');
   });
 });

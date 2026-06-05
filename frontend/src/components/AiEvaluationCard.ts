@@ -43,7 +43,12 @@ function reviewBlock(evaluation: AiEvaluation, review: ReviewView | null): strin
   return '';
 }
 
-export function AiEvaluationCard(evaluation: AiEvaluation, xpAwarded = 0, review: ReviewView | null = null): string {
+export function AiEvaluationCard(
+  evaluation: AiEvaluation,
+  xpAwarded = 0,
+  review: ReviewView | null = null,
+  provisional = false,
+): string {
   const scoreColor = evaluation.score >= 65 ? 'status--done' : evaluation.score >= 40 ? 'status--review' : 'status--invalid';
   const confPct = Math.round(evaluation.confidence * 100);
 
@@ -72,8 +77,9 @@ export function AiEvaluationCard(evaluation: AiEvaluation, xpAwarded = 0, review
       <div class="stat"><div class="stat__value"><span class="status ${scoreColor}">${evaluation.score}</span></div><div class="stat__label">Skóre / 100</div></div>
       <div class="stat"><div class="stat__value">${confPct} %</div><div class="stat__label">Istota AI</div></div>
       <div class="stat"><div class="stat__value">${evaluation.valid ? '✓' : '✗'}</div><div class="stat__label">Platné</div></div>
-      <div class="stat"><div class="stat__value xp-pill">${xpAwarded} XP</div><div class="stat__label">Získané XP</div></div>
+      <div class="stat"><div class="stat__value xp-pill">${xpAwarded} XP</div><div class="stat__label">${provisional ? 'Predbežné XP' : 'Získané XP'}</div></div>
     </div>
+    ${provisional && !review ? '<div class="chip chip--warm" style="margin-top:var(--space-3)">🎁 Predbežná odmena za návrh problému — čaká na potvrdenie učiteľom</div>' : ''}
     ${reasonRows ? `<div style="margin-top:var(--space-4)">${reasonRows}</div>` : ''}
     ${competencyChips ? `<div class="chip-row" style="margin-top:var(--space-3)">${competencyChips}</div>` : ''}
     ${teacherFlag}

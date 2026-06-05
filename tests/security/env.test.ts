@@ -14,8 +14,9 @@ describe('.env.example', () => {
       'VITE_SUPABASE_URL',
       'VITE_SUPABASE_ANON_KEY',
       'SUPABASE_SERVICE_ROLE_KEY',
-      'ANTHROPIC_API_KEY',
-      'AI_VALIDATION_MODEL',
+      'OPENAI_API_KEY',
+      'OPENAI_VALIDATION_MODEL',
+      'OPENAI_VALIDATION_PROVIDER',
       'MAX_UPLOAD_MB',
       'RATE_LIMIT_WINDOW_MS',
       'RATE_LIMIT_MAX',
@@ -27,7 +28,7 @@ describe('.env.example', () => {
 
   it('ships secret placeholders empty (no real values committed)', () => {
     expect(envExample).toMatch(/^SUPABASE_SERVICE_ROLE_KEY=\s*$/m);
-    expect(envExample).toMatch(/^ANTHROPIC_API_KEY=\s*$/m);
+    expect(envExample).toMatch(/^OPENAI_API_KEY=\s*$/m);
     expect(envExample).toMatch(/^VITE_SUPABASE_ANON_KEY=\s*$/m);
   });
 });

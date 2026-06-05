@@ -15,8 +15,9 @@
  * Do NOT import from frontend code.
  */
 import type { RequestContext } from '../lib/requestContext';
-import type { SubmissionInput, SubmissionQueryFilter } from '../validators/submissionValidator';
-import { validateSubmissionWithAI } from './aiValidationService';
+import type { SubmissionInput, SubmissionQueryFilter, SubmissionKind } from '../validators/submissionValidator';
+import { validateSubmissionWithAI, type AIValidationResult } from './aiValidationService';
+import { scoreProblemProposal } from './problemProposalService';
 import { getMissionById } from './missionService';
 import { levelForXp } from './progressService';
 import { getServerEnv, missingServerSecrets } from '../lib/env';
@@ -49,11 +50,39 @@ export interface SubmissionWithEvaluation extends SubmissionRow {
 }
 
 export type CreateResult =
-  | { ok: true; submissionId: string; xpAwarded: number; evaluation: SubmissionWithEvaluation['evaluation'] }
+  | {
+      ok: true;
+      submissionId: string;
+      xpAwarded: number;
+      kind: SubmissionKind;
+      provisional: boolean;
+      evaluation: SubmissionWithEvaluation['evaluation'];
+    }
   | { ok: false; error: string };
 
 function isConfigured(): boolean {
   return missingServerSecrets(getServerEnv()).length === 0;
+}
+
+/**
+ * Evaluate a submission by kind. A `problem_proposal` is scored against the
+ * problem rubric and earns a provisional reward (10–40%); other kinds use the
+ * mission rubric and full XP. XP is provisional until a teacher review.
+ */
+async function evaluateSubmission(
+  input: SubmissionInput,
+): Promise<{ evaluation: AIValidationResult; xpAwarded: number; isProposal: boolean }> {
+  if (input.submissionKind === 'problem_proposal') {
+    const scored = await scoreProblemProposal(input);
+    return { evaluation: scored.evaluation, xpAwarded: scored.provisionalXp, isProposal: true };
+  }
+  const mission = getMissionById(input.missionId);
+  const evaluation = await validateSubmissionWithAI(
+    { ...input, studentResponse: input.evidenceText || input.studentResponse },
+    { rubric: mission?.rubric, targetCompetencies: mission?.targetCompetencies },
+  );
+  const xpAwarded = evaluation.valid ? Math.round((mission?.baseXp ?? 80) * (evaluation.score / 100)) : 0;
+  return { evaluation, xpAwarded, isProposal: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,17 +140,14 @@ export async function getStudentProgress(ctx: RequestContext): Promise<{
 // Mock paths
 // ---------------------------------------------------------------------------
 
-async function mockCreate(ctx: RequestContext, input: SubmissionInput): Promise<CreateResult> {
-  const mission = getMissionById(input.missionId);
-  const evaluation = await validateSubmissionWithAI(
-    { ...input, studentResponse: input.evidenceText || input.studentResponse },
-    { rubric: mission?.rubric, targetCompetencies: mission?.targetCompetencies },
-  );
-  const xpAwarded = evaluation.valid ? Math.round((mission?.baseXp ?? 80) * (evaluation.score / 100)) : 0;
+async function mockCreate(_ctx: RequestContext, input: SubmissionInput): Promise<CreateResult> {
+  const { evaluation, xpAwarded, isProposal } = await evaluateSubmission(input);
   return {
     ok: true,
     submissionId: `mock-${Date.now()}`,
     xpAwarded,
+    kind: input.submissionKind ?? 'solution_submission',
+    provisional: isProposal,
     evaluation: {
       valid: evaluation.valid,
       score: evaluation.score,
@@ -200,8 +226,6 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
     const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
 
-    const mission = getMissionById(input.missionId);
-
     // Determine identity fields
     const studentId = ctx.mode === 'supabase_user' ? ctx.userId : null;
     const studentAccessCodeId = ctx.mode === 'student_session' ? ctx.studentAccessCodeId : null;
@@ -217,6 +241,7 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
         response_text: input.studentResponse,
         evidence_text: input.evidenceText,
         evidence_type: input.evidenceType,
+        submission_kind: input.submissionKind ?? 'solution_submission',
         status: 'submitted',
       })
       .select('id')
@@ -225,13 +250,8 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
     if (subErr || !sub) return { ok: false, error: 'Uloženie odovzdania zlyhalo.' };
     const submissionId = String((sub as Record<string, unknown>).id);
 
-    // Run mock AI validation
-    const evaluation = await validateSubmissionWithAI(
-      { missionId: input.missionId, studentResponse: input.studentResponse, evidenceText: input.evidenceText, evidenceType: input.evidenceType },
-      { rubric: mission?.rubric, targetCompetencies: mission?.targetCompetencies },
-    );
-
-    const xpAwarded = evaluation.valid ? Math.round((mission?.baseXp ?? 80) * (evaluation.score / 100)) : 0;
+    // Evaluate (problem proposal uses the problem rubric + provisional reward)
+    const { evaluation, xpAwarded, isProposal } = await evaluateSubmission(input);
 
     // Store AI evaluation
     await admin.from('ai_evaluations').insert({
@@ -250,13 +270,20 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
     // after a teacher review (approved/adjusted) — see teacherReviewService.
     await admin
       .from('submissions')
-      .update({ status: 'ai_reviewed', xp_awarded: xpAwarded })
+      .update({
+        status: 'ai_reviewed',
+        xp_awarded: xpAwarded,
+        problem_quality_score: isProposal ? evaluation.score : null,
+        problem_reward_xp: isProposal ? xpAwarded : 0,
+      })
       .eq('id', submissionId);
 
     return {
       ok: true,
       submissionId,
       xpAwarded,
+      kind: input.submissionKind ?? 'solution_submission',
+      provisional: isProposal,
       evaluation: {
         valid: evaluation.valid,
         score: evaluation.score,
