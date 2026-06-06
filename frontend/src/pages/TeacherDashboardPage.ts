@@ -9,7 +9,7 @@ import { ProblemProposalSummary } from '../components/dashboard/ProblemProposalS
 import { ReviewStatsPanel } from '../components/dashboard/ReviewStatsPanel';
 import { DashboardFilters, mountDashboardFilters } from '../components/dashboard/DashboardFilters';
 import { CsvExportButton, mountCsvExportButton } from '../components/dashboard/CsvExportButton';
-import { fetchDashboard, type DashboardData, type DashboardFilterParams } from '../services/dashboardApi';
+import { fetchDashboard, fetchClasses, type DashboardData, type DashboardFilterParams } from '../services/dashboardApi';
 
 function confidenceClass(confidence: number): string {
   if (confidence >= 0.8) return 'status--done';
@@ -168,11 +168,6 @@ export function mountTeacherDashboard(): void {
 // ---------------------------------------------------------------------------
 let dashboardState: DashboardFilterParams = { kind: 'all' };
 
-const DASHBOARD_CLASSES = [
-  { id: 'demo-class-a', name: 'Trieda 5.A' },
-  { id: 'demo-class-b', name: 'Trieda 5.B' },
-];
-
 function renderDashboard(data: DashboardData): void {
   const kpis = document.querySelector('#dashboard-kpis');
   if (kpis) {
@@ -197,9 +192,10 @@ function renderDashboard(data: DashboardData): void {
 }
 
 async function loadSchoolDashboard(): Promise<void> {
+  const classes = await fetchClasses();
   const filtersSlot = document.querySelector('#dashboard-filters');
   if (filtersSlot) {
-    filtersSlot.innerHTML = DashboardFilters({ classes: DASHBOARD_CLASSES, state: dashboardState, onChange: () => {} });
+    filtersSlot.innerHTML = DashboardFilters({ classes, state: dashboardState, onChange: () => {} });
     mountDashboardFilters(async (next) => {
       dashboardState = next;
       renderDashboard(await fetchDashboard(dashboardState));

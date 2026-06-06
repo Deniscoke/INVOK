@@ -148,9 +148,11 @@ export async function joinAsStudent(code: string, pseudonym: string): Promise<Jo
       const data = (await response.json()) as JoinResult & { sessionToken?: string };
       if (!response.ok || !data.ok) return { ok: false, error: data.error ?? 'Pripojenie zlyhalo.' };
       if (data.sessionToken) localStorage.setItem(STUDENT_TOKEN_KEY, data.sessionToken);
-      snapshot = { mode: 'supabase', user: { id: 'student', role: 'student', displayName: pseudonym } };
+      // Personal access codes carry a pre-assigned alias — prefer the server's.
+      const alias = data.studentAlias ?? pseudonym ?? 'Žiak';
+      snapshot = { mode: 'supabase', user: { id: 'student', role: 'student', displayName: alias } };
       emit();
-      return { ok: true, studentAlias: data.studentAlias, classId: data.classId, sessionMode: data.sessionMode };
+      return { ok: true, studentAlias: alias, classId: data.classId, sessionMode: data.sessionMode };
     } catch {
       return { ok: false, error: 'Pripojenie zlyhalo.' };
     }

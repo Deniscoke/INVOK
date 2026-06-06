@@ -81,6 +81,24 @@ Supabase domény cez `connect-src`), `Referrer-Policy`,
 > štýlom v MVP. Pri tvrdení produkcie presunúť inline štýly do tried a
 > `'unsafe-inline'` odstrániť.
 
+## Pilot setup a žiacke kódy
+
+Pilot setup (`/api/admin/*`, len teacher/admin; `/pilot` UI) umožní založiť
+školu, triedu a vygenerovať **pseudonymné žiacke kódy**. Bezpečnosť:
+
+- Žiacky kód sa vráti ako **plaintext IBA RAZ** (na vytlačenie/rozdanie) — do DB
+  ide len jeho `sha256` **hash** (`student_access_codes.code_hash`). Plaintext sa
+  **neukladá** a **neloguje**.
+- List endpoint (`GET /api/admin/student-codes`) vracia len `id, pseudonym,
+  is_active, created_at, last_used_at` — **nikdy** hash ani plaintext (stráži
+  `tests/security/studentCodePrivacy.test.ts`).
+- Žiaci majú **pseudonymy** (napr. `Líška-07`), žiadne mená ani e-maily.
+- Vytváranie školy: admin alebo `PILOT_SETUP_ENABLED=true`/dev bootstrap. Triedy
+  a kódy: teacher/admin v rozsahu svojej školy/triedy. Student/anonymous → **403**.
+- Žiak vstupuje cez osobný kód → server overí hash → vytvorí session s
+  **prideleným** pseudonymom (input pseudonym sa ignoruje); alebo cez kód triedy
+  + zvolenú prezývku.
+
 ## Školský dashboard a CSV export (anonymizácia)
 
 Dashboard (`/api/dashboard/*`, len teacher/admin) zobrazuje **iba agregáty**

@@ -6,13 +6,14 @@ export function StudentJoinPage(): string {
   <section class="auth-page">
     <div style="text-align:center">${Mascot({ size: 96 })}</div>
     <h1>Pripoj sa do triedy</h1>
-    <p class="muted">Zadaj kód od učiteľa a vyber si prezývku. Nepotrebuješ e-mail.</p>
+    <p class="muted">Zadaj kód od učiteľa. Nepotrebuješ e-mail. Ak máš osobný kód,
+      prezývku už máš pridelenú — pole nechaj prázdne.</p>
     <form id="join-form" class="card stack" novalidate>
-      <label class="field">Kód triedy
+      <label class="field">Kód
         <input id="join-code" type="text" autocomplete="off" inputmode="latin" placeholder="napr. ABC123" required>
       </label>
-      <label class="field">Prezývka
-        <input id="join-pseudonym" type="text" autocomplete="off" placeholder="napr. Líška-07" required>
+      <label class="field">Prezývka (len pri kóde triedy)
+        <input id="join-pseudonym" type="text" autocomplete="off" placeholder="napr. Líška-07">
       </label>
       <button class="btn btn--primary" type="submit">Pripojiť sa</button>
       <p id="join-msg" class="muted" role="status" aria-live="polite"></p>

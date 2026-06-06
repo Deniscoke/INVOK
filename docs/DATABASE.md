@@ -93,6 +93,15 @@ final_score), `class_memberships` (počet žiakov), `mission_competencies`
 triedy učiteľa (alebo školu admina), a vracia len **počty/priemery** — nikdy
 riadky per žiak.
 
+## Pilot setup (bez novej migrácie)
+
+Pilot setup (`pilotSetupService`) píše do existujúcich tabuliek — **žiadna nová
+migrácia nebola potrebná**: `schools`, `classes`, `school_memberships`,
+`class_memberships`, `student_access_codes` (pseudonym + `code_hash`, `created_by`,
+`last_used_at`). Potrebné indexy (`student_access_codes(class_id)`,
+`*_memberships(user_id)`) už existujú z 001/002. Žiacke kódy: plaintext sa
+nikdy neukladá, len `sha256` hash.
+
 ## Otvorené otázky / limity
 
 - Žiaci zatiaľ **nie sú viazaní na `auth.users`**; priame čítanie pod RLS pre

@@ -5,6 +5,7 @@ import { StudentDashboardPage, mountStudentDashboard } from './pages/StudentDash
 import { TeacherDashboardPage, mountTeacherDashboard } from './pages/TeacherDashboardPage';
 import { LoginPage, mountLoginPage } from './pages/LoginPage';
 import { StudentJoinPage, mountStudentJoinPage } from './pages/StudentJoinPage';
+import { PilotSetupPage, mountPilotSetup } from './pages/PilotSetupPage';
 import { AuthStatus } from './components/AuthStatus';
 import { getSnapshot, init as initAuth, onAuthChange, signOut } from './services/authService';
 
@@ -22,6 +23,7 @@ const routes: Route[] = [
   { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, mount: mountTeacherDashboard, inNav: true },
   { path: '/login', label: 'Prihlásenie', render: LoginPage, mount: mountLoginPage },
   { path: '/join', label: 'Pripojiť sa', render: StudentJoinPage, mount: mountStudentJoinPage },
+  { path: '/pilot', label: 'Pilot', render: PilotSetupPage, mount: mountPilotSetup, inNav: true },
 ];
 
 function currentPath(): string {

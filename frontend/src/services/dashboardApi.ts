@@ -80,6 +80,26 @@ async function getJson<T>(path: string, headers: Record<string, string>): Promis
   return (await res.json()) as T;
 }
 
+export interface DashboardClass {
+  id: string;
+  name: string;
+}
+
+/** Real classes for the current teacher/admin (demo fallback if no API). */
+export async function fetchClasses(): Promise<DashboardClass[]> {
+  try {
+    const res = await fetch('/api/dashboard/classes', { headers: await authHeaders() });
+    if (!res.ok) throw new Error();
+    const data = (await res.json()) as { classes: DashboardClass[] };
+    return data.classes.map((c) => ({ id: c.id, name: c.name }));
+  } catch {
+    return [
+      { id: 'demo-class-a', name: 'Trieda 5.A' },
+      { id: 'demo-class-b', name: 'Trieda 5.B' },
+    ];
+  }
+}
+
 export async function fetchDashboard(params: DashboardFilterParams): Promise<DashboardData> {
   const qs = queryString(params);
   try {

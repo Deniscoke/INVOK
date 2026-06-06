@@ -91,7 +91,20 @@ npm run typecheck   # tsc --noEmit
   Bez API beží v bezpečnom **demo** režime s anonymizovanými mock dátami.
 - Detaily: [docs/SECURITY.md](docs/SECURITY.md).
 
+## Pilot setup
+
+Stránka **`/pilot`** (učiteľ/admin) umožní založiť školu a triedu a vygenerovať
+**pseudonymné žiacke kódy**:
+
+- Kódy sa zobrazia **iba raz** (na vytlačenie/rozdanie) — do DB ide len ich
+  hash, plaintext sa neukladá ani neloguje.
+- Zoznam existujúcich kódov nikdy nevracia plaintext ani hash.
+- Žiak sa pripojí osobným kódom (prezývku má pridelenú) alebo kódom triedy +
+  vlastnou prezývkou — **bez e-mailu**. Dashboard filter používa reálne triedy.
+- Bootstrap prvej školy bez admina: `PILOT_SETUP_ENABLED=true` (alebo dev).
+  Bez API beží UI v bezpečnom **demo** režime. Detaily: [docs/SECURITY.md](docs/SECURITY.md).
+
 ## Ďalšie kroky
 
-Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 7 — pilot v škole
-(pripojenie Supabase, reálne triedy, zber spätnej väzby).
+Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 8 — grantový reporting
+a reálny pilot (pripojenie Supabase, produkčné ladenie).

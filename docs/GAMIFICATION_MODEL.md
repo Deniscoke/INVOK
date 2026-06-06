@@ -69,7 +69,8 @@ agregujú do **anonymizovaného školského dashboardu** pre pedagogické
 rozhodovanie a grantový reporting: KPI prehľad, priemerný kompetenčný progres,
 súhrn návrhov problémov a štatistiky učiteľských hodnotení (vrátane rozdielu
 AI vs. učiteľské skóre). Dáta sú **iba agregáty** + anonymizovaný CSV export —
-viď [SECURITY.md](SECURITY.md).
+viď [SECURITY.md](SECURITY.md). Jednotkou reportingu je **trieda** (pseudonymní
+žiaci), ktorú učiteľ založí cez Pilot setup a naplní žiackymi kódmi.
 
 ## Mastery
 

@@ -29,6 +29,8 @@ export interface ServerEnv {
   aiDailyMaxPerClass: number;
   aiMaxEvidenceChars: number;
   aiMinEvidenceChars: number;
+  // Pilot bootstrap: allow school creation without an existing admin (dev/pilot).
+  pilotSetupEnabled: boolean;
 }
 
 function positiveInt(value: string | undefined, fallback: number): number {
@@ -57,6 +59,7 @@ export function getServerEnv(): ServerEnv {
     aiDailyMaxPerClass: positiveInt(env.AI_DAILY_MAX_PER_CLASS, 300),
     aiMaxEvidenceChars: positiveInt(env.AI_MAX_EVIDENCE_CHARS, 5_000),
     aiMinEvidenceChars: positiveInt(env.AI_MIN_EVIDENCE_CHARS, 20),
+    pilotSetupEnabled: env.PILOT_SETUP_ENABLED === 'true' || (env.VITE_APP_ENV ?? 'development') === 'development',
   };
 }
 
