@@ -101,8 +101,22 @@ Stránka **`/pilot`** (učiteľ/admin) umožní založiť školu a triedu a vyge
 - Zoznam existujúcich kódov nikdy nevracia plaintext ani hash.
 - Žiak sa pripojí osobným kódom (prezývku má pridelenú) alebo kódom triedy +
   vlastnou prezývkou — **bez e-mailu**. Dashboard filter používa reálne triedy.
-- Bootstrap prvej školy bez admina: `PILOT_SETUP_ENABLED=true` (alebo dev).
+- Bootstrap prvej školy bez admina: `PILOT_SETUP_ENABLED=true` (secure-by-default
+  **off** — zapni len počas bootstrapu, potom späť `false`).
   Bez API beží UI v bezpečnom **demo** režime. Detaily: [docs/SECURITY.md](docs/SECURITY.md).
+
+## Pilot deployment quickstart
+
+1. **Vercel env vars** — nastav podľa [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+   (Supabase + `OPENAI_VALIDATION_PROVIDER=mock`, `PILOT_SETUP_ENABLED=false`).
+2. **Supabase migrácie** — spusti `001`–`005` z `supabase/migrations/` (+ voliteľne `seed.sql`).
+3. **Deploy** — push na `master` (Vercel deploy z GitHubu).
+4. **Bootstrap** — dočasne `PILOT_SETUP_ENABLED=true`, otvor `/pilot`.
+5. Vytvor **školu** a **triedu**.
+6. Vygeneruj **žiacke kódy** (zobrazia sa raz — vytlač/rozdaj). Vráť `PILOT_SETUP_ENABLED=false`.
+7. Otestuj **žiacke prihlásenie** cez kód (`/join`) a **dashboard** + CSV (`/teacher`).
+
+Plný smoke test: [docs/PILOT_SMOKE_TEST.md](docs/PILOT_SMOKE_TEST.md).
 
 ## Ďalšie kroky
 

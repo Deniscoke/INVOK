@@ -5,6 +5,7 @@ import {
   generateStudentAccessCodes,
 } from '../../backend/services/pilotSetupService';
 import type { RequestContext } from '../../backend/lib/requestContext';
+import { getServerEnv } from '../../backend/lib/env';
 
 const teacher: RequestContext = { mode: 'supabase_user', userId: 't1', role: 'teacher' };
 const admin: RequestContext = { mode: 'supabase_user', userId: 'a1', role: 'admin' };
@@ -40,5 +41,11 @@ describe('pilot setup access control', () => {
     expect(blob).not.toContain('SERVICE_ROLE');
     expect(blob).not.toContain('sk-proj');
     expect(blob).not.toContain('code_hash');
+  });
+});
+
+describe('setup mode is secure-by-default', () => {
+  it('pilotSetupEnabled is false unless PILOT_SETUP_ENABLED=true', () => {
+    expect(getServerEnv().pilotSetupEnabled).toBe(false);
   });
 });

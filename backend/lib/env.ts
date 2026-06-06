@@ -41,7 +41,7 @@ function positiveInt(value: string | undefined, fallback: number): number {
 export function getServerEnv(): ServerEnv {
   const env = process.env;
   return {
-    appEnv: env.VITE_APP_ENV ?? 'development',
+    appEnv: env.VITE_APP_ENV ?? env.APP_ENV ?? 'development',
     supabaseUrl: env.VITE_SUPABASE_URL,
     supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     openaiApiKey: env.OPENAI_API_KEY,
@@ -59,7 +59,9 @@ export function getServerEnv(): ServerEnv {
     aiDailyMaxPerClass: positiveInt(env.AI_DAILY_MAX_PER_CLASS, 300),
     aiMaxEvidenceChars: positiveInt(env.AI_MAX_EVIDENCE_CHARS, 5_000),
     aiMinEvidenceChars: positiveInt(env.AI_MIN_EVIDENCE_CHARS, 20),
-    pilotSetupEnabled: env.PILOT_SETUP_ENABLED === 'true' || (env.VITE_APP_ENV ?? 'development') === 'development',
+    // Secure by default: setup mode is ON only when explicitly enabled. This
+    // prevents an accidental open setup in production if APP_ENV is unset.
+    pilotSetupEnabled: env.PILOT_SETUP_ENABLED === 'true',
   };
 }
 

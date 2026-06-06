@@ -3,6 +3,20 @@
 Princíp: **privacy-by-design** s pseudonymizáciou. Pri deťoch sme zámerne
 konzervatívnejší (minimalizácia dát, obmedzenie účelu, žiadne zbytočné PII).
 
+## Pre-pilot security checklist
+
+Pred reálnym pilotom over (viď [DEPLOYMENT.md](DEPLOYMENT.md)):
+
+- [ ] **Supabase service role kľúč rotovaný** (ak bol niekedy mimo Vercel env).
+- [ ] Všetky secrets **iba vo Vercel** env vars — nie v `.env.example`, nie vo frontende.
+- [ ] **`OPENAI_VALIDATION_PROVIDER=mock`** pre prvý deploy (reálne volania až po cost review).
+- [ ] **`PILOT_SETUP_ENABLED=false`** v produkcii (secure-by-default; `true` len počas bootstrapu, potom späť `false`).
+- [ ] Migrácie 001–005 spustené; RLS zapnuté na citlivých tabuľkách.
+- [ ] Rate limiter je **MVP / in-memory** (per-instance) — pred väčším pilotom nahradiť **Redis/Upstash** alebo Supabase-backed limiterom.
+- [ ] **Žiadne reálne mená ani e-maily žiakov** — len pseudonymy a kódy.
+- [ ] **Žiacke kódy** sa zobrazia v plaintexte **iba raz**; v DB len hash.
+- [ ] **CSV export** je len anonymizovaný (žiadne mená/e-maily/tokeny/kódy/hashe).
+
 ## Kľúče a tajomstvá
 
 | Premenná | Kde žije | Pravidlo |
@@ -93,7 +107,8 @@ Pilot setup (`/api/admin/*`, len teacher/admin; `/pilot` UI) umožní založiť
   is_active, created_at, last_used_at` — **nikdy** hash ani plaintext (stráži
   `tests/security/studentCodePrivacy.test.ts`).
 - Žiaci majú **pseudonymy** (napr. `Líška-07`), žiadne mená ani e-maily.
-- Vytváranie školy: admin alebo `PILOT_SETUP_ENABLED=true`/dev bootstrap. Triedy
+- Vytváranie školy: admin alebo `PILOT_SETUP_ENABLED=true` (secure-by-default
+  **off**; zapnúť len počas bootstrapu, potom späť `false`). Triedy
   a kódy: teacher/admin v rozsahu svojej školy/triedy. Student/anonymous → **403**.
 - Žiak vstupuje cez osobný kód → server overí hash → vytvorí session s
   **prideleným** pseudonymom (input pseudonym sa ignoruje); alebo cez kód triedy
