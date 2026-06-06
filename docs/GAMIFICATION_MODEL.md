@@ -62,6 +62,15 @@ Predbežné XP sa **nezapočíta definitívne** — potvrdí ho učiteľský rev
 dvojfázový commit). Pri chýbajúcom dôkaze AI odporučí učiteľské posúdenie. Rubrika
 zámerne odmeňuje **dôkaz a konkrétnosť**, aby nemotivovala k vymýšľaniu problémov.
 
+## Reporting pre školu (dashboard)
+
+Hravé prvky (XP, levely, kompetencie, návrhy problémov, teacher review) sa
+agregujú do **anonymizovaného školského dashboardu** pre pedagogické
+rozhodovanie a grantový reporting: KPI prehľad, priemerný kompetenčný progres,
+súhrn návrhov problémov a štatistiky učiteľských hodnotení (vrátane rozdielu
+AI vs. učiteľské skóre). Dáta sú **iba agregáty** + anonymizovaný CSV export —
+viď [SECURITY.md](SECURITY.md).
+
 ## Mastery
 
 `user_progress.mastery` (0–1) je **formatívny signál** zvládnutia kompetencie,

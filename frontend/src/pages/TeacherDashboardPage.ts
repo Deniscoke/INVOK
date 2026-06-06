@@ -3,6 +3,13 @@ import { CompetencyCard } from '../components/CompetencyCard';
 import { TeacherReviewPanel, mountTeacherReviewPanel } from '../components/TeacherReviewPanel';
 import { getClassOverview, getCompetencyById, getMissionById, getPendingReviews } from '../services/mockDataService';
 import type { SubmitReviewResult } from '../services/teacherReviewApi';
+import { KpiCard } from '../components/dashboard/KpiCard';
+import { CompetencyProgressGrid } from '../components/dashboard/CompetencyProgressGrid';
+import { ProblemProposalSummary } from '../components/dashboard/ProblemProposalSummary';
+import { ReviewStatsPanel } from '../components/dashboard/ReviewStatsPanel';
+import { DashboardFilters, mountDashboardFilters } from '../components/dashboard/DashboardFilters';
+import { CsvExportButton, mountCsvExportButton } from '../components/dashboard/CsvExportButton';
+import { fetchDashboard, type DashboardData, type DashboardFilterParams } from '../services/dashboardApi';
 
 function confidenceClass(confidence: number): string {
   if (confidence >= 0.8) return 'status--done';
@@ -58,6 +65,28 @@ export function TeacherDashboardPage(): string {
     .join('');
 
   return `
+  <section style="margin-bottom: var(--space-6)">
+    <div class="section-title">
+      <h2>Školský dashboard</h2>
+      <span id="dashboard-export"></span>
+    </div>
+    <p class="muted" style="margin-top:0">Anonymizovaný prehľad pre pedagogické rozhodovanie a grantový reporting.</p>
+    <div id="dashboard-filters"></div>
+    <div id="dashboard-kpis" style="margin-top:var(--space-4)"><p class="muted">Načítavam prehľad…</p></div>
+    <div style="margin-top:var(--space-5)">
+      <div class="section-title"><h3 style="margin:0">Návrhy problémov</h3></div>
+      <div id="dashboard-proposals"></div>
+    </div>
+    <div style="margin-top:var(--space-5)">
+      <div class="section-title"><h3 style="margin:0">Učiteľské hodnotenia</h3></div>
+      <div id="dashboard-reviews"></div>
+    </div>
+    <div style="margin-top:var(--space-5)">
+      <div class="section-title"><h3 style="margin:0">Kompetenčný progres</h3></div>
+      <div id="dashboard-competencies"></div>
+    </div>
+  </section>
+
   <section class="card">
     <div class="card-title">
       <div><div class="muted">Trieda</div><h2 style="margin:0">${overview.name}</h2></div>
@@ -95,6 +124,7 @@ export function TeacherDashboardPage(): string {
 
 /** Wire the "Posúdiť" buttons to open/close an inline review panel. */
 export function mountTeacherDashboard(): void {
+  void loadSchoolDashboard();
   const reviews = getPendingReviews();
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-review-open]'))) {
     button.addEventListener('click', () => {
@@ -131,4 +161,54 @@ export function mountTeacherDashboard(): void {
       mountTeacherReviewPanel(panelOptions);
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// School dashboard (anonymized reporting)
+// ---------------------------------------------------------------------------
+let dashboardState: DashboardFilterParams = { kind: 'all' };
+
+const DASHBOARD_CLASSES = [
+  { id: 'demo-class-a', name: 'Trieda 5.A' },
+  { id: 'demo-class-b', name: 'Trieda 5.B' },
+];
+
+function renderDashboard(data: DashboardData): void {
+  const kpis = document.querySelector('#dashboard-kpis');
+  if (kpis) {
+    const s = data.summary;
+    kpis.innerHTML = `<div class="stat-row">
+      ${KpiCard('Žiaci', s.studentsCount)}
+      ${KpiCard('Triedy', s.classesCount)}
+      ${KpiCard('Misie', s.missionsCount)}
+      ${KpiCard('Odovzdania', s.submissionsCount)}
+      ${KpiCard('Potvrdené', s.reviewedCount)}
+      ${KpiCard('Čaká na review', s.pendingReviewCount)}
+      ${KpiCard('Návrhy', s.problemProposalsCount)}
+      ${KpiCard('Finálne XP', s.totalFinalXp)}
+    </div>${data.source === 'mock' ? '<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Demo (anonymizované) dáta — pripoj Supabase pre reálne čísla.</p>' : ''}`;
+  }
+  const proposals = document.querySelector('#dashboard-proposals');
+  if (proposals) proposals.innerHTML = ProblemProposalSummary(data.proposals);
+  const reviews = document.querySelector('#dashboard-reviews');
+  if (reviews) reviews.innerHTML = ReviewStatsPanel(data.reviews);
+  const competencies = document.querySelector('#dashboard-competencies');
+  if (competencies) competencies.innerHTML = CompetencyProgressGrid(data.competencies);
+}
+
+async function loadSchoolDashboard(): Promise<void> {
+  const filtersSlot = document.querySelector('#dashboard-filters');
+  if (filtersSlot) {
+    filtersSlot.innerHTML = DashboardFilters({ classes: DASHBOARD_CLASSES, state: dashboardState, onChange: () => {} });
+    mountDashboardFilters(async (next) => {
+      dashboardState = next;
+      renderDashboard(await fetchDashboard(dashboardState));
+    });
+  }
+  const exportSlot = document.querySelector('#dashboard-export');
+  if (exportSlot) {
+    exportSlot.innerHTML = CsvExportButton();
+    mountCsvExportButton(() => dashboardState);
+  }
+  renderDashboard(await fetchDashboard(dashboardState));
 }

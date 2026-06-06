@@ -81,6 +81,20 @@ Supabase domény cez `connect-src`), `Referrer-Policy`,
 > štýlom v MVP. Pri tvrdení produkcie presunúť inline štýly do tried a
 > `'unsafe-inline'` odstrániť.
 
+## Školský dashboard a CSV export (anonymizácia)
+
+Dashboard (`/api/dashboard/*`, len teacher/admin) zobrazuje **iba agregáty**
+(počty a priemery), nikdy nie riadky per žiak. Číta `class_id` (UUID),
+`mission_id`/`competency_id` (slugy) a numerické skóre — **nepripája sa** na
+`profiles.display_name`/pseudonym ani `auth.users`, takže PII nemôže uniknúť.
+
+CSV export obsahuje: `class_id, mission_id, competency_id, submissions_count,
+reviewed_count, avg_ai_score, avg_teacher_score, avg_problem_quality_score,
+total_final_xp, date_from, date_to`. **Nikdy** neexportuje mená, e-maily, access
+kódy, session tokeny, hashe, secrets ani raw AI prompty (stráži
+`tests/security/dashboardPrivacy.test.ts`). Scope: učiteľ → vlastné triedy,
+admin → vlastná škola; inak **403**.
+
 ## Rate limiting a cost guard (AI)
 
 Chránené endpointy: `POST /api/ai/validate-submission` a `POST /api/submissions`.

@@ -83,6 +83,16 @@ approve/adjust.
 Bez osobných údajov. Scoring: `problemProposalService` +
 `progressService.problemProposalXp` (10–40 % základného XP misie).
 
+## Reporting (školský dashboard)
+
+Dashboard nepridáva nové tabuľky — **agreguje** existujúce: `submissions`
+(status, kind, xp_awarded, problem_quality_score, problem_reward_xp),
+`ai_evaluations` (score, suggested_teacher_review), `teacher_reviews` (decision,
+final_score), `class_memberships` (počet žiakov), `mission_competencies`
+(mapovanie na kompetencie). `dashboardService` číta cez service role, scoped na
+triedy učiteľa (alebo školu admina), a vracia len **počty/priemery** — nikdy
+riadky per žiak.
+
 ## Otvorené otázky / limity
 
 - Žiaci zatiaľ **nie sú viazaní na `auth.users`**; priame čítanie pod RLS pre

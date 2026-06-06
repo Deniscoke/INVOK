@@ -82,7 +82,16 @@ npm run typecheck   # tsc --noEmit
 - **Podnikavosť:** žiak získa **predbežné XP (10–40 %)** aj za kvalitný **návrh
   problému** (`submission_kind='problem_proposal'`), nielen za celé riešenie.
 
+## Školský dashboard (anonymizovaný reporting)
+
+- Pre **učiteľa/admina** (`/api/dashboard/*`, 403 pre žiaka/anonymného): KPI
+  prehľad, kompetenčný progres, súhrn návrhov problémov, štatistiky review
+  (vrátane rozdielu AI vs. učiteľ) a **CSV export**.
+- **Iba agregáty** (počty/priemery) — žiadne mená, e-maily, kódy, tokeny, hashe.
+  Bez API beží v bezpečnom **demo** režime s anonymizovanými mock dátami.
+- Detaily: [docs/SECURITY.md](docs/SECURITY.md).
+
 ## Ďalšie kroky
 
-Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 6 — školský dashboard
-(agregovaný anonymizovaný progres).
+Pozri [docs/ROADMAP.md](docs/ROADMAP.md). Najbližšie: Fáza 7 — pilot v škole
+(pripojenie Supabase, reálne triedy, zber spätnej väzby).
