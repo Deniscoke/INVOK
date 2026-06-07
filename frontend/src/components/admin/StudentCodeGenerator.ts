@@ -22,15 +22,30 @@ export function StudentCodeGenerator(classId: string): string {
 
 /** One-time view of plaintext codes (never shown again). */
 export function renderGeneratedCodes(codes: GeneratedCode[]): string {
-  const rows = codes.map((c) => `<tr><td>${c.pseudonym}</td><td><code>${c.code}</code></td></tr>`).join('');
+  const rows = codes
+    .map(
+      (c) =>
+        `<tr><td>${c.pseudonym}</td><td><code>${c.code}</code></td><td><a class="btn btn--ghost btn--sm" target="_blank" rel="noopener" href="#/join?code=${encodeURIComponent(
+          c.code,
+        )}&alias=${encodeURIComponent(c.pseudonym)}">Test</a></td></tr>`,
+    )
+    .join('');
+  const joinUrl = typeof window === 'undefined' ? '/#/join' : `${window.location.origin}/#/join`;
   return `
   <div class="card" style="margin-top:var(--space-3);border-left:4px solid var(--color-warm)">
     <div class="teacher-hint__label" style="color:#b45309">⚠ Kódy sa zobrazia IBA RAZ — vytlač alebo skopíruj ich teraz</div>
     <p class="muted" style="font-size:var(--fs-sm)">Do databázy sa ukladá len ich hash. Plaintext sa už nedá zobraziť.</p>
-    <div style="display:flex;gap:var(--space-2);margin:var(--space-3) 0">
+    <div style="display:flex;gap:var(--space-2);margin:var(--space-3) 0;flex-wrap:wrap">
       <button class="btn btn--ghost btn--sm" id="codes-copy" type="button">Kopírovať</button>
       <button class="btn btn--ghost btn--sm" id="codes-print" type="button">Tlačiť</button>
+      <a class="btn btn--ghost btn--sm" id="codes-open-join" href="#/join" target="_blank" rel="noopener">Otvoriť žiacky vstup</a>
     </div>
-    <table class="codes-table"><thead><tr><th>Prezývka</th><th>Kód</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="codes-table"><thead><tr><th>Prezývka</th><th>Kód</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="teacher-hint" style="margin-top:var(--space-4)">
+      <div class="teacher-hint__label">Ako sa žiaci prihlásia</div>
+      Pošli žiakom adresu <code>${joinUrl}</code> a každému jeho riadok z tabuľky vyššie
+      (Prezývka + Kód). Po zadaní sa otvorí žiacky dashboard. <em>Test</em> v poslednom
+      stĺpci otvorí pripojenie ako konkrétny žiak v novom tabe pre rýchlu kontrolu.
+    </div>
   </div>`;
 }

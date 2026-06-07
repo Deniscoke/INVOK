@@ -28,7 +28,9 @@ const routes: Route[] = [
 
 function currentPath(): string {
   const hash = window.location.hash.replace(/^#/, '');
-  return hash.length > 0 ? hash : '/';
+  const raw = hash.length > 0 ? hash : '/';
+  // Strip query/fragment so `#/join?code=...` matches the `/join` route.
+  return raw.split('?')[0].split('#')[0];
 }
 
 /**

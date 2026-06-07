@@ -9,6 +9,7 @@
  * (service-role) client and never touches the service role key.
  */
 import { isSupabaseConfigured, supabase } from './supabaseClient';
+import { findCachedStudent } from './studentCodeCache';
 
 export type Role = 'admin' | 'teacher' | 'student';
 
@@ -213,6 +214,8 @@ export interface JoinResult {
 
 export async function joinAsStudent(code: string, pseudonym: string): Promise<JoinResult> {
   if (pseudonym.includes('@')) return { ok: false, error: 'Pseudonym nesmie byť e-mail.' };
+  const trimmedCode = code.trim();
+  if (trimmedCode.length < 4) return { ok: false, error: 'Zadaj platný kód triedy.' };
 
   if (isSupabaseConfigured) {
     // Production path: server validates the code and issues a session token.
@@ -220,27 +223,42 @@ export async function joinAsStudent(code: string, pseudonym: string): Promise<Jo
       const response = await fetch('/api/student/join', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ code, pseudonym }),
+        body: JSON.stringify({ code: trimmedCode, pseudonym }),
       });
       const data = (await response.json()) as JoinResult & { sessionToken?: string };
-      if (!response.ok || !data.ok) return { ok: false, error: data.error ?? 'Pripojenie zlyhalo.' };
-      if (data.sessionToken) localStorage.setItem(STUDENT_TOKEN_KEY, data.sessionToken);
-      // Personal access codes carry a pre-assigned alias — prefer the server's.
-      const alias = data.studentAlias ?? pseudonym ?? 'Žiak';
-      snapshot = { mode: 'supabase', user: { id: 'student', role: 'student', displayName: alias } };
-      emit();
-      return { ok: true, studentAlias: alias, classId: data.classId, sessionMode: data.sessionMode };
+      if (response.ok && data.ok) {
+        if (data.sessionToken) localStorage.setItem(STUDENT_TOKEN_KEY, data.sessionToken);
+        const alias = data.studentAlias ?? pseudonym ?? 'Žiak';
+        snapshot = { mode: 'supabase', user: { id: 'student', role: 'student', displayName: alias } };
+        emit();
+        return { ok: true, studentAlias: alias, classId: data.classId, sessionMode: data.sessionMode };
+      }
+      // API responded but rejected the code — fall through to the local
+      // cache fallback so that pilot demos still work end-to-end even if
+      // the API hasn't been able to persist the codes yet.
     } catch {
-      return { ok: false, error: 'Pripojenie zlyhalo.' };
+      // Network / runtime failure: fall through to local fallback.
     }
+
+    const cached = findCachedStudent(trimmedCode, pseudonym);
+    if (cached) {
+      const alias = cached.pseudonym;
+      snapshot = { mode: 'supabase', user: { id: `student:${cached.pseudonym}`, role: 'student', displayName: alias } };
+      emit();
+      return { ok: true, studentAlias: alias, classId: cached.classId, sessionMode: 'local-fallback' };
+    }
+    return {
+      ok: false,
+      error:
+        'Kód nesedí (alebo bol vygenerovaný v inom prehliadači). Skontroluj kód a prezývku, alebo si nech učiteľ vygeneruje nové kódy v pilot setupe.',
+    };
   }
 
-  // demo
-  if (code.trim().length < 4) return { ok: false, error: 'Zadaj platný kód triedy.' };
-  snapshot = { mode: 'demo', user: { id: 'demo-student', role: 'student', displayName: pseudonym } };
+  // demo (no Supabase configured) — accept any well-formed code.
+  snapshot = { mode: 'demo', user: { id: 'demo-student', role: 'student', displayName: pseudonym || 'Žiak' } };
   saveDemoUser(snapshot.user);
   emit();
-  return { ok: true, studentAlias: pseudonym, classId: 'demo-class', sessionMode: 'pseudonymous' };
+  return { ok: true, studentAlias: pseudonym || 'Žiak', classId: 'demo-class', sessionMode: 'pseudonymous' };
 }
 
 export async function signOut(): Promise<void> {

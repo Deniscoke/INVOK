@@ -7,6 +7,7 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { getSnapshot } from './authService';
 import { rememberClass } from './dashboardApi';
+import { rememberStudentCodes } from './studentCodeCache';
 
 export interface EntityResult {
   ok: boolean;
@@ -88,12 +89,23 @@ export async function generateStudentCodes(input: { classId: string; count: numb
   try {
     const data = await post<GenerateCodesResult>('/api/admin/student-codes', input);
     if (!data.ok) return { ok: false, source: 'api', error: data.error };
-    return { ...data, source: 'api' };
+    const result: GenerateCodesResult = { ...data, source: 'api' };
+    if (result.codes) rememberStudentCodes(input.classId, result.codes);
+    return result;
   } catch {
     if (isSupabaseConfigured && !getSnapshot().user) {
       return { ok: false, source: 'mock', error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.' };
     }
-    return { ok: true, classId: input.classId, source: 'mock', codes: demoCodes(input.count, input.pseudonymPrefix) };
+    const fallback: GenerateCodesResult = {
+      ok: true,
+      classId: input.classId,
+      source: 'mock',
+      codes: demoCodes(input.count, input.pseudonymPrefix),
+    };
+    // Even when we had to fall back to mock codes, remember them locally so
+    // the student-join page can validate them while the API is unavailable.
+    if (fallback.codes) rememberStudentCodes(input.classId, fallback.codes);
+    return fallback;
   }
 }
 
