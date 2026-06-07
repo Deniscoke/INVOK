@@ -11,7 +11,7 @@ with **Vercel serverless functions** in `api/`, backed by **Supabase Postgres**.
 | Root Directory | `.` (repo root — leave default) |
 | Build Command | `npm run build` |
 | Output Directory | `dist` |
-| Node.js Version | 20.x (pinned via `engines`) |
+| Node.js Version | 22.x (pinned via `engines`) |
 
 `api/` is auto-detected as serverless functions (Fluid Compute). No extra config.
 **Hobby/Free plan compatible**: 12 functions total (catch-all routers like

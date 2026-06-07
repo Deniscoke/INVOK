@@ -5,7 +5,7 @@
   "description": "INVOk – gamifikovaná vzdelávacia platforma pre slovenské základné školy (ŠVP ZV).",
   "type": "module",
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
