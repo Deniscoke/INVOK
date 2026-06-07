@@ -99,6 +99,31 @@ export function getCachedCodesForClass(classId: string): CachedStudentCode[] {
   return read().filter((entry) => entry.classId === classId);
 }
 
+/** Lightweight summary for the student-join diagnostic panel. */
+export interface CachedCodesSummary {
+  total: number;
+  classes: { classId: string; className?: string; count: number; samplePseudonyms: string[] }[];
+}
+
+export function summarizeCachedCodes(): CachedCodesSummary {
+  const entries = read();
+  const byClass = new Map<string, CachedStudentCode[]>();
+  for (const entry of entries) {
+    const list = byClass.get(entry.classId) ?? [];
+    list.push(entry);
+    byClass.set(entry.classId, list);
+  }
+  return {
+    total: entries.length,
+    classes: Array.from(byClass.entries()).map(([classId, list]) => ({
+      classId,
+      className: list[0]?.className,
+      count: list.length,
+      samplePseudonyms: list.slice(0, 5).map((c) => c.pseudonym),
+    })),
+  };
+}
+
 /**
  * Find a cached code matching the supplied access code and (optional)
  * pseudonym. Pseudonym matching is case-insensitive; when omitted the
