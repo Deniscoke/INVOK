@@ -14,6 +14,8 @@ with **Vercel serverless functions** in `api/`, backed by **Supabase Postgres**.
 | Node.js Version | 20.x (pinned via `engines`) |
 
 `api/` is auto-detected as serverless functions (Fluid Compute). No extra config.
+**Hobby/Free plan compatible**: 12 functions total (catch-all routers like
+`api/admin/[...path].ts` consolidate related routes — frontend URLs unchanged).
 
 ## 2. Environment variables (Vercel → Settings → Environment Variables)
 
