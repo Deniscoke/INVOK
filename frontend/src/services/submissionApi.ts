@@ -4,7 +4,14 @@
  * Sends the student session token (if available) via X-Student-Token header
  * so the server can resolve the pseudonymous context. Never sends the service
  * role key or any hash — those stay server-only.
+ *
+ * When /api/* is unavailable (plain Vite dev), falls back to a safe local
+ * demo scorer so pilot demos still work offline.
  */
+
+import { isSupabaseConfigured } from './supabaseClient';
+import { getSnapshot } from './authService';
+import { submitDemo } from './demoSubmissionService';
 
 export type SubmissionKind = 'problem_proposal' | 'solution_submission' | 'reflection';
 
@@ -47,14 +54,51 @@ export interface SubmissionRow {
   evaluation: AiEvaluation | null;
 }
 
+export interface SolutionSubmissionFields {
+  missionId: string;
+  classId?: string;
+  /** Hlavný popis riešenia / odpovede na misiu */
+  solutionSummary: string;
+  /** Dôkaz, pozorovanie alebo popis fotky */
+  evidence: string;
+  /** Konkrétny prvý krok */
+  firstStep: string;
+  /** Koho sa to týka / aký je prínos */
+  impact?: string;
+  /** Voliteľný názov pripojenej fotky (AI posúdi popis) */
+  photoNote?: string;
+}
+
 function studentToken(): string | null {
   return localStorage.getItem('invok_student_session');
 }
 
 function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
   const token = studentToken();
-  if (token) return { 'x-student-token': token, 'content-type': 'application/json' };
-  return { 'content-type': 'application/json' };
+  if (token) headers['x-student-token'] = token;
+  // Helps local API dev when Supabase is not configured.
+  if (!isSupabaseConfigured) headers['x-dev-role'] = 'student';
+  return headers;
+}
+
+function shouldUseDemoFallback(): boolean {
+  if (!isSupabaseConfigured) return true;
+  return getSnapshot().mode === 'demo';
+}
+
+async function parseJsonResponse(response: Response): Promise<Record<string, unknown> | null> {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) return null;
+  try {
+    return (await response.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function apiUnreachable(): boolean {
+  return shouldUseDemoFallback();
 }
 
 export async function submitMission(payload: SubmissionPayload): Promise<SubmissionResult> {
@@ -64,36 +108,27 @@ export async function submitMission(payload: SubmissionPayload): Promise<Submiss
       headers: authHeaders(),
       body: JSON.stringify(payload),
     });
-    const data = (await response.json()) as SubmissionResult & { error?: string };
-    if (!response.ok || !data.ok) {
-      return { ok: false, error: data.error ?? 'Odovzdanie zlyhalo.', source: 'api' };
+    const data = await parseJsonResponse(response);
+    if (!data) {
+      if (apiUnreachable()) return submitDemo(payload);
+      return { ok: false, error: 'Server neodpovedal správne. Skús znova.', source: 'mock' };
     }
-    return { ...data, source: 'api' };
+    const result = data as unknown as SubmissionResult & { error?: string };
+    if (!response.ok || !result.ok) {
+      if ((response.status === 401 || response.status === 403) && isSupabaseConfigured && getSnapshot().mode === 'supabase') {
+        return {
+          ok: false,
+          error: (result.error as string | undefined) ?? 'Nie si prihlásený. Žiaci sa pripájajú cez /join.',
+          source: 'api',
+        };
+      }
+      if (apiUnreachable() || response.status >= 500) return submitDemo(payload);
+      return { ok: false, error: result.error ?? 'Odovzdanie zlyhalo.', source: 'api' };
+    }
+    return { ...result, source: 'api' };
   } catch {
-    // Offline fallback: run mock validation inline via the AI endpoint
-    return submitMock(payload);
-  }
-}
-
-async function submitMock(payload: SubmissionPayload): Promise<SubmissionResult> {
-  try {
-    const response = await fetch('/api/ai/validate-submission', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ missionId: payload.missionId, studentResponse: payload.studentResponse, evidenceText: payload.evidenceText, evidenceType: payload.evidenceType }),
-    });
-    const data = (await response.json()) as { evaluation?: AiEvaluation } & Partial<AiEvaluation>;
-    // Endpoint returns { source, model, evaluation }; tolerate a bare evaluation too.
-    const eval_ = (data.evaluation ?? (data as AiEvaluation));
-    return {
-      ok: true,
-      submissionId: `local-${Date.now()}`,
-      xpAwarded: eval_.valid ? Math.floor(eval_.score * 0.8) : 0,
-      evaluation: eval_,
-      source: 'mock',
-    };
-  } catch {
-    return { ok: false, error: 'Nie je možné odovzdať bez pripojenia.', source: 'mock' };
+    // Network / missing API (plain Vite dev) — keep demos working.
+    return submitDemo(payload);
   }
 }
 
@@ -128,6 +163,31 @@ export async function submitProblemProposal(fields: ProblemProposalFields): Prom
     evidenceType: 'text',
     classId: fields.classId,
     submissionKind: 'problem_proposal',
+  });
+}
+
+/**
+ * Submit a structured solution with richer evidence for better AI scoring.
+ */
+export async function submitSolution(fields: SolutionSubmissionFields): Promise<SubmissionResult> {
+  const evidenceParts = [fields.evidence.trim()];
+  if (fields.photoNote?.trim()) evidenceParts.push(`Foto / vizuálny dôkaz: ${fields.photoNote.trim()}`);
+  const evidenceText = evidenceParts.filter(Boolean).join('\n');
+
+  const studentResponse = [
+    `Riešenie / odpoveď: ${fields.solutionSummary.trim()}`,
+    fields.impact?.trim() ? `Prínos / koho sa týka: ${fields.impact.trim()}` : '',
+    `Prvý krok: ${fields.firstStep.trim()}`,
+    evidenceText ? `Dôkaz: ${evidenceText}` : '',
+  ].filter(Boolean).join('\n');
+
+  return submitMission({
+    missionId: fields.missionId,
+    studentResponse,
+    evidenceText,
+    evidenceType: 'text',
+    classId: fields.classId,
+    submissionKind: 'solution_submission',
   });
 }
 

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:full": "vercel dev --listen 5173",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

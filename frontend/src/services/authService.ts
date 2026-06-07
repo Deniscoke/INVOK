@@ -104,8 +104,16 @@ export async function init(): Promise<void> {
 export async function signInTeacher(email: string, password: string): Promise<ActionResult> {
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      const hint = error.message.toLowerCase().includes('invalid')
+        ? ' Skontroluj e-mail a heslo, alebo si najprv vytvor účet.'
+        : '';
+      return { ok: false, error: error.message + hint };
+    }
     await refreshFromSupabase();
+    if (!snapshot.user) {
+      return { ok: false, error: 'Prihlásenie prebehlo, ale chýba profil učiteľa. Skús registráciu znova alebo kontaktuj podporu.' };
+    }
     emit();
     return { ok: true };
   }
@@ -115,6 +123,45 @@ export async function signInTeacher(email: string, password: string): Promise<Ac
   saveDemoUser(snapshot.user);
   emit();
   return { ok: true, info: 'Demo režim (bez Supabase).' };
+}
+
+/** Register a teacher account (Supabase) or enter demo mode locally. */
+export async function signUpTeacher(email: string, password: string, displayName: string): Promise<ActionResult> {
+  if (!email.trim()) return { ok: false, error: 'Zadaj e-mail.' };
+  if (password.length < 6) return { ok: false, error: 'Heslo musí mať aspoň 6 znakov.' };
+
+  if (isSupabaseConfigured && supabase) {
+    const name = displayName.trim() || email.split('@')[0] || 'Učiteľ';
+    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+    if (error) return { ok: false, error: error.message };
+    if (!data.user) return { ok: false, error: 'Registrácia zlyhala.' };
+
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: data.user.id,
+      role: 'teacher',
+      display_name: name,
+    });
+    if (profileError) {
+      return { ok: false, error: profileError.message.includes('duplicate')
+        ? 'Účet už existuje — skús sa prihlásiť.'
+        : profileError.message };
+    }
+
+    if (data.session) {
+      await refreshFromSupabase();
+      emit();
+      return { ok: true, info: 'Účet vytvorený. Môžeš pokračovať do pilot setupu.' };
+    }
+    return {
+      ok: true,
+      info: 'Účet vytvorený. Ak Supabase vyžaduje potvrdenie e-mailu, najprv ho potvrď a potom sa prihlás.',
+    };
+  }
+
+  snapshot = { mode: 'demo', user: { id: 'demo-teacher', role: 'teacher', displayName: displayName.trim() || email.split('@')[0] || 'Demo učiteľ' } };
+  saveDemoUser(snapshot.user);
+  emit();
+  return { ok: true, info: 'Demo režim — účet uložený lokálne.' };
 }
 
 /** Magic-link readiness: sends an OTP link when configured; mocked in demo. */

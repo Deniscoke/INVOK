@@ -1,4 +1,5 @@
-import { signInTeacher, signInWithMagicLink } from '../services/authService';
+import { signInTeacher, signInWithMagicLink, signUpTeacher } from '../services/authService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 export function LoginPage(): string {
   return `
@@ -6,6 +7,15 @@ export function LoginPage(): string {
     <h1>Prihlásenie</h1>
     <p class="muted">Učitelia a admini sa prihlasujú e-mailom. Žiaci sa pripájajú
       <a href="#/join">kódom triedy</a> bez e-mailu.</p>
+    ${isSupabaseConfigured ? '<p class="muted">Nový učiteľ? Najprv si vytvor účet v záložke <strong>Registrácia</strong>, potom pokračuj do <a href="#/pilot">pilot setupu</a>.</p>' : ''}
+
+    <div class="card stack" style="margin-bottom:var(--space-3)">
+      <div role="tablist" aria-label="Spôsob prihlásenia" style="display:flex;gap:8px">
+        <button class="btn btn--ghost btn--sm" type="button" id="tab-login" aria-selected="true">Prihlásenie</button>
+        <button class="btn btn--ghost btn--sm" type="button" id="tab-register" aria-selected="false">Registrácia</button>
+      </div>
+    </div>
+
     <form id="login-form" class="card stack" novalidate>
       <label class="field">E-mail
         <input id="login-email" type="email" autocomplete="email" placeholder="ucitel@skola.sk" required>
@@ -17,25 +27,71 @@ export function LoginPage(): string {
       <button class="btn btn--ghost" type="button" id="login-magic">Poslať magic link</button>
       <p id="login-msg" class="muted" role="status" aria-live="polite"></p>
     </form>
+
+    <form id="register-form" class="card stack" novalidate hidden>
+      <h3 style="margin:0">Nový učiteľský účet</h3>
+      <p class="muted" style="margin:0">Po registrácii pokračuj do pilot setupu a vytvor školu, triedu a kódy pre žiakov.</p>
+      <label class="field">Zobrazované meno (pseudonym)
+        <input id="register-name" type="text" maxlength="80" placeholder="napr. Učiteľka M." autocomplete="name">
+      </label>
+      <label class="field">E-mail
+        <input id="register-email" type="email" autocomplete="email" placeholder="ucitel@skola.sk" required>
+      </label>
+      <label class="field">Heslo (min. 6 znakov)
+        <input id="register-password" type="password" autocomplete="new-password" minlength="6" required>
+      </label>
+      <button class="btn btn--primary" type="submit">Vytvoriť účet</button>
+      <p id="register-msg" class="muted" role="status" aria-live="polite"></p>
+    </form>
   </section>`;
 }
 
 export function mountLoginPage(): void {
-  const form = document.querySelector<HTMLFormElement>('#login-form');
-  const msg = document.querySelector<HTMLElement>('#login-msg');
+  const loginForm = document.querySelector<HTMLFormElement>('#login-form');
+  const registerForm = document.querySelector<HTMLFormElement>('#register-form');
+  const loginMsg = document.querySelector<HTMLElement>('#login-msg');
+  const registerMsg = document.querySelector<HTMLElement>('#register-msg');
+  const tabLogin = document.querySelector<HTMLButtonElement>('#tab-login');
+  const tabRegister = document.querySelector<HTMLButtonElement>('#tab-register');
 
-  form?.addEventListener('submit', async (event) => {
+  const showLogin = (): void => {
+    loginForm?.removeAttribute('hidden');
+    registerForm?.setAttribute('hidden', '');
+    tabLogin?.setAttribute('aria-selected', 'true');
+    tabRegister?.setAttribute('aria-selected', 'false');
+  };
+  const showRegister = (): void => {
+    registerForm?.removeAttribute('hidden');
+    loginForm?.setAttribute('hidden', '');
+    tabRegister?.setAttribute('aria-selected', 'true');
+    tabLogin?.setAttribute('aria-selected', 'false');
+  };
+
+  tabLogin?.addEventListener('click', showLogin);
+  tabRegister?.addEventListener('click', showRegister);
+
+  loginForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const email = (document.querySelector('#login-email') as HTMLInputElement | null)?.value ?? '';
     const password = (document.querySelector('#login-password') as HTMLInputElement | null)?.value ?? '';
     const result = await signInTeacher(email, password);
-    if (msg) msg.textContent = result.ok ? (result.info ?? 'Prihlásený.') : (result.error ?? 'Prihlásenie zlyhalo.');
+    if (loginMsg) loginMsg.textContent = result.ok ? (result.info ?? 'Prihlásený.') : (result.error ?? 'Prihlásenie zlyhalo.');
     if (result.ok) window.location.hash = '/teacher';
+  });
+
+  registerForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = (document.querySelector('#register-name') as HTMLInputElement | null)?.value ?? '';
+    const email = (document.querySelector('#register-email') as HTMLInputElement | null)?.value ?? '';
+    const password = (document.querySelector('#register-password') as HTMLInputElement | null)?.value ?? '';
+    const result = await signUpTeacher(email, password, name);
+    if (registerMsg) registerMsg.textContent = result.info ?? result.error ?? '';
+    if (result.ok) window.location.hash = '/pilot';
   });
 
   document.querySelector('#login-magic')?.addEventListener('click', async () => {
     const email = (document.querySelector('#login-email') as HTMLInputElement | null)?.value ?? '';
     const result = await signInWithMagicLink(email);
-    if (msg) msg.textContent = result.info ?? result.error ?? '';
+    if (loginMsg) loginMsg.textContent = result.info ?? result.error ?? '';
   });
 }

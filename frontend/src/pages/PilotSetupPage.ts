@@ -10,13 +10,24 @@ import {
   deactivateStudentCode,
   type GeneratedCode,
 } from '../services/pilotSetupApi';
+import { getSnapshot } from '../services/authService';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 
 export function PilotSetupPage(): string {
+  const auth = getSnapshot();
+  const needsLogin = isSupabaseConfigured && !auth.user;
   return `
   <section class="auth-page" style="max-width:760px">
     <h1>Pilot setup</h1>
     <p class="muted">Vytvor školu, triedu a pseudonymné žiacke kódy. Žiadne osobné údaje.
       Bez pripojeného API beží v bezpečnom <strong>demo</strong> režime.</p>
+    ${needsLogin ? `
+    <div class="card" style="border-left:4px solid var(--color-warm);margin-bottom:var(--space-4)">
+      <strong>Potrebné prihlásenie</strong>
+      <p class="muted" style="margin:8px 0 0">Pre reálny pilot sa najprv
+        <a href="#/login">zaregistruj alebo prihlás</a> ako učiteľ. Potom tu vytvor školu a kódy pre žiakov.</p>
+    </div>` : ''}
+    ${auth.user ? `<p class="muted">Prihlásený: <strong>${auth.user.displayName}</strong> (${auth.user.role})</p>` : ''}
     <div id="setup-school">${SchoolSetupForm()}</div>
     <div id="setup-class" style="margin-top:var(--space-4)"></div>
     <div id="setup-codes" style="margin-top:var(--space-4)"></div>

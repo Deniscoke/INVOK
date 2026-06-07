@@ -4,7 +4,8 @@
  * real secrets, no PII) when the API is unavailable. Plaintext student codes
  * are returned by the server only ONCE and are never stored client-side.
  */
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { getSnapshot } from './authService';
 
 export interface EntityResult {
   ok: boolean;
@@ -58,6 +59,9 @@ export async function createSchool(input: { schoolName: string; region?: string 
   try {
     return { ...(await post<EntityResult>('/api/admin/schools', input)), source: 'api' };
   } catch {
+    if (isSupabaseConfigured && !getSnapshot().user) {
+      return { ok: false, error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.', source: 'mock' };
+    }
     return { ok: true, id: 'demo-school', name: input.schoolName, source: 'mock' };
   }
 }
@@ -66,6 +70,9 @@ export async function createClass(input: { schoolId: string; className: string; 
   try {
     return { ...(await post<EntityResult>('/api/admin/classes', input)), source: 'api' };
   } catch {
+    if (isSupabaseConfigured && !getSnapshot().user) {
+      return { ok: false, error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.', source: 'mock' };
+    }
     return { ok: true, id: `demo-class-${Date.now()}`, name: input.className, source: 'mock' };
   }
 }
@@ -76,6 +83,9 @@ export async function generateStudentCodes(input: { classId: string; count: numb
     if (!data.ok) return { ok: false, source: 'api', error: data.error };
     return { ...data, source: 'api' };
   } catch {
+    if (isSupabaseConfigured && !getSnapshot().user) {
+      return { ok: false, source: 'mock', error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.' };
+    }
     return { ok: true, classId: input.classId, source: 'mock', codes: demoCodes(input.count, input.pseudonymPrefix) };
   }
 }
