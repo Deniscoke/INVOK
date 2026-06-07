@@ -5,7 +5,7 @@
  * Mirrors the server mock scorer closely enough for pilot demos — never sends
  * data off-device.
  */
-import type { SubmissionKind, SubmissionPayload, SubmissionResult, AiEvaluation } from './submissionApi';
+import type { PhotoEvidence, SubmissionKind, SubmissionPayload, SubmissionResult, AiEvaluation } from './submissionApi';
 import { getMissions } from './mockDataService';
 import { getSnapshot } from './authService';
 
@@ -46,6 +46,7 @@ function mockEvaluate(
   studentResponse: string,
   evidenceText: string,
   rubric: { id: string; label: string; description: string }[],
+  photo?: PhotoEvidence,
 ): AiEvaluation {
   const combined = `${studentResponse}\n${evidenceText}`;
   const length = studentResponse.trim().length;
@@ -66,11 +67,17 @@ function mockEvaluate(
     if (countKeywords(combined, keywords) >= 1) rubricBonus += 5;
   }
 
+  // Photo evidence bonus: attaching a real image (with a caption) is strong
+  // evidence even before vision-AI is wired in.
+  const photoBonus = photo
+    ? (photo.caption && photo.caption.trim().length >= 5 ? 12 : 6)
+    : 0;
+
   const lengthScore = clamp(length / 8, 0, 50);
   const signalScore = clamp(totalSignals * 7, 0, 35);
-  const score = Math.round(clamp(lengthScore + signalScore + rubricBonus, 0, 100));
-  const confidence = Math.round(clamp(0.28 + length / 1400 + totalSignals * 0.05, 0.28, 0.92) * 100) / 100;
-  const hasEvidence = evidenceText.trim().length > 0;
+  const score = Math.round(clamp(lengthScore + signalScore + rubricBonus + photoBonus, 0, 100));
+  const confidence = Math.round(clamp(0.28 + length / 1400 + totalSignals * 0.05 + (photo ? 0.07 : 0), 0.28, 0.92) * 100) / 100;
+  const hasEvidence = evidenceText.trim().length > 0 || Boolean(photo);
   const valid = score >= 45 && length >= 30;
   const suggestedTeacherReview = !valid || confidence < 0.75 || !hasEvidence;
 
@@ -122,11 +129,11 @@ function saveDemoSubmission(record: Record<string, unknown>): void {
   }
 }
 
-export function submitDemo(payload: SubmissionPayload): SubmissionResult {
+export function submitDemo(payload: SubmissionPayload, photo?: PhotoEvidence): SubmissionResult {
   const mission = getMissions().find((m) => m.id === payload.missionId);
   const isProposal = payload.submissionKind === 'problem_proposal';
   const rubric = isProposal ? PROBLEM_RUBRIC : (mission?.rubric ?? []);
-  const evaluation = mockEvaluate(payload.studentResponse, payload.evidenceText, rubric);
+  const evaluation = mockEvaluate(payload.studentResponse, payload.evidenceText, rubric, photo);
   const baseXp = mission?.baseXp ?? 100;
   const xpAwarded = isProposal
     ? problemProposalXp(baseXp, evaluation.score)
@@ -145,6 +152,13 @@ export function submitDemo(payload: SubmissionPayload): SubmissionResult {
     pseudonym: alias,
     xpAwarded,
     evaluation,
+    photo: photo ? {
+      fileName: photo.fileName,
+      mimeType: photo.mimeType,
+      sizeBytes: photo.sizeBytes,
+      caption: photo.caption,
+      // Skip dataUrl in storage to stay under localStorage quota
+    } : null,
     createdAt: new Date().toISOString(),
   });
 

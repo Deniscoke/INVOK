@@ -7,8 +7,10 @@
  * Self-contained: renders HTML, mounts listeners, returns the result via callback.
  */
 import type { Mission } from '../services/mockDataService';
-import type { SubmissionResult } from '../services/submissionApi';
+import type { PhotoEvidence, SubmissionResult } from '../services/submissionApi';
 import { submitProblemProposal, submitSolution } from '../services/submissionApi';
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export type SubmissionFormKind = 'solution_submission' | 'problem_proposal';
 
@@ -67,11 +69,15 @@ function solutionForm({ mission }: SubmissionFormOptions): string {
     </label>
 
     ${acceptsImage ? `
-    <label class="field">Foto dôkazu (voliteľné)
-      <input id="solution-photo-${id}" type="file" accept="image/*">
-      <span class="muted" style="font-size:var(--fs-xs)">AI zatiaľ posúdi popis fotky — prilož krátky popis nižšie.</span>
+    <label class="field">Foto dôkazu (voliteľné, max 5 MB)
+      <input id="solution-photo-${id}" type="file" accept="image/*" capture="environment">
+      <span class="muted" style="font-size:var(--fs-xs)">AI posúdi popis fotky aj rozmery; učiteľ uvidí náhľad.</span>
     </label>
-    <label class="field">Popis fotky (ak si pridal/a obrázok)
+    <div id="solution-photo-preview-${id}" style="display:none;margin-top:-8px">
+      <img id="solution-photo-img-${id}" alt="Náhľad fotky" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--color-border)">
+      <p id="solution-photo-meta-${id}" class="muted" style="font-size:var(--fs-xs);margin:6px 0 0"></p>
+    </div>
+    <label class="field">Popis fotky (čo na nej je)
       <input id="solution-photo-note-${id}" type="text" maxlength="500"
         placeholder="napr. Fotka ukazuje plný odpadkový kôš pri vchode…">
     </label>` : ''}
@@ -81,13 +87,66 @@ function solutionForm({ mission }: SubmissionFormOptions): string {
   </form>`;
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(reader.error ?? new Error('read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function mountSolutionForm({ mission, classId, onResult }: SubmissionFormOptions): void {
   const id = mission.id;
   const form = document.querySelector<HTMLFormElement>(`#submission-form-${id}`);
   const msg = document.querySelector<HTMLParagraphElement>(`#submission-msg-${id}`);
   const btn = document.querySelector<HTMLButtonElement>(`#submit-btn-${id}`);
+  const photoInput = document.querySelector<HTMLInputElement>(`#solution-photo-${id}`);
+  const previewWrap = document.querySelector<HTMLDivElement>(`#solution-photo-preview-${id}`);
+  const previewImg = document.querySelector<HTMLImageElement>(`#solution-photo-img-${id}`);
+  const previewMeta = document.querySelector<HTMLParagraphElement>(`#solution-photo-meta-${id}`);
   const read = (sel: string): string =>
     (document.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement | null)?.value.trim() ?? '';
+
+  let photoEvidence: PhotoEvidence | null = null;
+
+  photoInput?.addEventListener('change', async () => {
+    const file = photoInput.files?.[0];
+    photoEvidence = null;
+    if (previewWrap) previewWrap.style.display = 'none';
+    if (msg) msg.textContent = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      if (msg) msg.textContent = 'Príloha musí byť obrázok (JPG, PNG, WEBP).';
+      photoInput.value = '';
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      if (msg) msg.textContent = 'Fotka je príliš veľká (max 5 MB).';
+      photoInput.value = '';
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      photoEvidence = {
+        fileName: file.name,
+        mimeType: file.type || 'image/jpeg',
+        sizeBytes: file.size,
+        dataUrl,
+      };
+      if (previewImg) previewImg.src = dataUrl;
+      if (previewMeta) {
+        const sizeKb = Math.max(1, Math.round(file.size / 1024));
+        previewMeta.textContent = `${file.name} · ${file.type || 'image'} · ${sizeKb} kB`;
+      }
+      if (previewWrap) previewWrap.style.display = 'block';
+    } catch {
+      if (msg) msg.textContent = 'Fotku sa nepodarilo načítať. Skús inú.';
+      photoInput.value = '';
+    }
+  });
 
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -95,12 +154,7 @@ function mountSolutionForm({ mission, classId, onResult }: SubmissionFormOptions
     const evidence = read(`#solution-evidence-${id}`);
     const firstStep = read(`#solution-first-step-${id}`);
     const impact = read(`#solution-impact-${id}`);
-    const photoInput = document.querySelector<HTMLInputElement>(`#solution-photo-${id}`);
     const photoNoteRaw = read(`#solution-photo-note-${id}`);
-    const photoFile = photoInput?.files?.[0];
-    const photoNote = photoFile
-      ? [photoFile.name, photoNoteRaw].filter(Boolean).join(' — ')
-      : photoNoteRaw;
 
     if (solutionSummary.length < 20) {
       if (msg) msg.textContent = 'Popis riešenia musí mať aspoň 20 znakov.';
@@ -114,13 +168,17 @@ function mountSolutionForm({ mission, classId, onResult }: SubmissionFormOptions
       if (msg) msg.textContent = 'Opíš prvý konkrétny krok (min. 5 znakov).';
       return;
     }
-    if (photoFile && photoNoteRaw.length < 5) {
-      if (msg) msg.textContent = 'Pri fotke doplň krátky popis, aby AI vedelo posúdiť dôkaz.';
+    if (photoEvidence && photoNoteRaw.length < 5) {
+      if (msg) msg.textContent = 'Pri fotke doplň krátky popis (min. 5 znakov), aby AI vedelo posúdiť dôkaz.';
       return;
     }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Odosielam…'; }
     if (msg) msg.textContent = '';
+
+    const photo = photoEvidence
+      ? { ...photoEvidence, caption: photoNoteRaw || undefined }
+      : undefined;
 
     const result = await submitSolution({
       missionId: mission.id,
@@ -128,13 +186,13 @@ function mountSolutionForm({ mission, classId, onResult }: SubmissionFormOptions
       evidence,
       firstStep,
       impact: impact || undefined,
-      photoNote: photoNote || undefined,
+      photo,
       classId,
     });
 
     if (btn) { btn.disabled = false; btn.textContent = 'Odovzdať'; }
     if (msg) msg.textContent = result.ok
-      ? (result.source === 'mock' ? 'Uložené lokálne (demo režim).' : '')
+      ? (result.source === 'mock' ? 'Uložené lokálne (demo režim). Učiteľ uvidí pri pripojení servera.' : 'Odovzdané.')
       : (result.error ?? 'Chyba pri odovzdaní.');
     onResult(result);
   });
