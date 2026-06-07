@@ -65,7 +65,15 @@ supabase/migrations/002_auth_and_student_access.sql
 supabase/migrations/003_submission_workflow.sql
 supabase/migrations/004_teacher_review_workflow.sql
 supabase/migrations/005_problem_proposal_rewards.sql
+supabase/migrations/006_auto_create_profile.sql
 ```
+
+Migration 006 installs a trigger on `auth.users` that auto-creates the
+matching `profiles` row from the signup metadata. Without it teacher
+registration cannot complete and you will see `Could not find the table
+'public.profiles'`. See [SUPABASE_AUTH_SETUP.md](SUPABASE_AUTH_SETUP.md)
+for the full auth-side checklist (Site URL, Redirect URLs, email
+confirmation).
 
 Then (optional) seed the catalog: `supabase/seed.sql` (competencies, badges,
 published missions — **no personal data**). All migrations are idempotent and

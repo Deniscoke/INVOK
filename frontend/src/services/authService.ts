@@ -125,36 +125,66 @@ export async function signInTeacher(email: string, password: string): Promise<Ac
   return { ok: true, info: 'Demo režim (bez Supabase).' };
 }
 
-/** Register a teacher account (Supabase) or enter demo mode locally. */
+/**
+ * Register a teacher account (Supabase) or enter demo mode locally.
+ *
+ * We rely on the `handle_new_auth_user` DB trigger (migration 006) to create
+ * the matching `profiles` row — that way registration works even when no
+ * session exists yet (email-confirmation flows) and we don't depend on RLS
+ * accepting a client-side INSERT.
+ *
+ * `emailRedirectTo` overrides Supabase's default Site URL (which is often
+ * `http://localhost:3000` until configured), so confirmation links point
+ * back to the deployed app.
+ */
 export async function signUpTeacher(email: string, password: string, displayName: string): Promise<ActionResult> {
   if (!email.trim()) return { ok: false, error: 'Zadaj e-mail.' };
   if (password.length < 6) return { ok: false, error: 'Heslo musí mať aspoň 6 znakov.' };
 
   if (isSupabaseConfigured && supabase) {
     const name = displayName.trim() || email.split('@')[0] || 'Učiteľ';
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
-    if (error) return { ok: false, error: error.message };
+    const redirectTo =
+      (import.meta.env.VITE_PUBLIC_BASE_URL as string | undefined)?.trim() ||
+      (typeof window !== 'undefined' ? `${window.location.origin}/` : undefined);
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: { role: 'teacher', display_name: name },
+        emailRedirectTo: redirectTo,
+      },
+    });
+    if (error) {
+      const lower = error.message.toLowerCase();
+      const hint = lower.includes('already registered') || lower.includes('user already')
+        ? ' Skús sa prihlásiť.'
+        : lower.includes('profiles')
+          ? ' Vyzerá to, že v Supabase nie sú aplikované migrácie — pozri docs/SUPABASE_AUTH_SETUP.md.'
+          : '';
+      return { ok: false, error: error.message + hint };
+    }
     if (!data.user) return { ok: false, error: 'Registrácia zlyhala.' };
 
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      role: 'teacher',
-      display_name: name,
-    });
-    if (profileError) {
-      return { ok: false, error: profileError.message.includes('duplicate')
-        ? 'Účet už existuje — skús sa prihlásiť.'
-        : profileError.message };
-    }
-
     if (data.session) {
+      // Trigger created the profile; load it.
       await refreshFromSupabase();
       emit();
+      if (!snapshot.user) {
+        return {
+          ok: false,
+          error:
+            'Účet bol vytvorený, ale chýba profil učiteľa. V Supabase aplikuj migrácie (006_auto_create_profile.sql) a skús znova.',
+        };
+      }
       return { ok: true, info: 'Účet vytvorený. Môžeš pokračovať do pilot setupu.' };
     }
+
     return {
       ok: true,
-      info: 'Účet vytvorený. Ak Supabase vyžaduje potvrdenie e-mailu, najprv ho potvrď a potom sa prihlás.',
+      info:
+        'Účet vytvorený. Supabase ti poslal potvrdzovací e-mail — klikni naň a potom sa prihlás. ' +
+        'Ak link smeruje na localhost, treba v Supabase nastaviť Site URL na adresu aplikácie (docs/SUPABASE_AUTH_SETUP.md).',
     };
   }
 
