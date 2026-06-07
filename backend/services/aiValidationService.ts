@@ -219,9 +219,103 @@ export async function openAIValidateSubmission(
   }
 }
 
+/**
+ * Strip the structured field labels we add when composing submissions on the
+ * frontend (e.g. "Problém:", "Dôkaz:", "Prvý nápad na riešenie:") so the
+ * mock keyword counter cannot reward students for label words alone.
+ */
+const LABEL_RE = /(^|\n)\s*(problém|koho sa týka|čo (?:som si|si si) všimol|dôkaz(?: alebo pozorovanie)?|prvý nápad(?: na riešenie)?|riešenie\s*\/\s*odpoveď|riešenie|prínos\s*\/\s*koho sa týka|prínos|prvý krok|foto dôkaz|popis fotky)\s*:[^\n]*/giu;
+
+function stripFieldLabels(text: string): string {
+  return text
+    .replace(LABEL_RE, (match) => {
+      const colonIdx = match.indexOf(':');
+      return colonIdx >= 0 ? '\n' + match.slice(colonIdx + 1) : '';
+    })
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+}
+
+interface CoherenceResult {
+  coherent: boolean;
+  reason: string;
+}
+
+/**
+ * Reject obvious gibberish ("asdasdasd"), pure repetition, or text that
+ * is structurally unlike natural Slovak/English. Keeps the mock honest so
+ * arbitrary keyboard input cannot earn a passing score.
+ */
+function assessCoherence(text: string): CoherenceResult {
+  const trimmed = text.trim();
+  if (trimmed.length < 15) return { coherent: false, reason: 'Vstup je príliš krátky.' };
+
+  const letters = trimmed.toLowerCase().replace(/[^a-záäčďéíľĺňóôŕšťúýž]/g, '');
+  if (letters.length >= 8) {
+    const unique = new Set(letters).size;
+    if (unique < 6) return { coherent: false, reason: 'Príliš málo rôznych písmen.' };
+
+    for (let patternLen = 2; patternLen <= 4; patternLen++) {
+      const pattern = letters.slice(0, patternLen);
+      if (pattern.length < patternLen) continue;
+      let i = 0;
+      while (i + patternLen <= letters.length && letters.slice(i, i + patternLen) === pattern) i += patternLen;
+      if (i >= letters.length * 0.6 && i >= patternLen * 3) {
+        return { coherent: false, reason: 'Text je len opakovaný vzor znakov.' };
+      }
+    }
+
+    const vowels = (letters.match(/[aáäeéiíoóôuúyý]/g) ?? []).length;
+    const vowelRatio = vowels / letters.length;
+    if (vowelRatio < 0.18 || vowelRatio > 0.65) {
+      return { coherent: false, reason: 'Pomer samohlások nezodpovedá bežnému jazyku.' };
+    }
+  }
+
+  const words = trimmed.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+  if (words.length < 3) return { coherent: false, reason: 'Príliš málo slov.' };
+  const avg = words.reduce((s, w) => s + w.length, 0) / words.length;
+  if (avg < 2.4 || avg > 14) return { coherent: false, reason: 'Nereálna priemerná dĺžka slov.' };
+  const uniqueWords = new Set(words).size;
+  if (words.length >= 5 && uniqueWords / words.length < 0.4) {
+    return { coherent: false, reason: 'Slová sa príliš opakujú.' };
+  }
+  const realLooking = words.filter((w) => /[aeiouyáéíóúýäô]/i.test(w) && w.length >= 2).length;
+  if (realLooking / words.length < 0.5) {
+    return { coherent: false, reason: 'Väčšina slov nevyzerá ako reálne slová.' };
+  }
+  return { coherent: true, reason: '' };
+}
+
 function mockEvaluate(input: SubmissionInput, context: AIValidationContext): AIValidationResult {
-  const combined = `${input.studentResponse}\n${input.evidenceText}`;
-  const length = input.studentResponse.trim().length;
+  // Score only the student's actual text — strip our injected section labels.
+  const cleanResponse = stripFieldLabels(input.studentResponse);
+  const cleanEvidence = stripFieldLabels(input.evidenceText);
+  const combined = `${cleanResponse}\n${cleanEvidence}`;
+  const length = cleanResponse.length;
+
+  const coherence = assessCoherence(combined);
+  if (!coherence.coherent) {
+    const rubric = context.rubric ?? [];
+    const reasons: AIReason[] = [
+      { criterion: 'zrozumiteľnosť vstupu', result: 'unmet', explanation: coherence.reason },
+      ...rubric.map((c) => ({
+        criterion: c.label,
+        result: 'unmet' as const,
+        explanation: `Vstup nedáva zmysel — kritérium „${c.label}" nemožno posúdiť.`,
+      })),
+    ];
+    return {
+      valid: false,
+      score: Math.max(0, Math.min(15, Math.round(length / 30))),
+      confidence: 0.32,
+      reasons,
+      detectedCompetencies: [],
+      suggestedTeacherReview: true,
+      model: MOCK_MODEL,
+      source: 'mock',
+    };
+  }
 
   const evidenceSignals = countKeywords(combined, EVIDENCE_KEYWORDS);
   const solutionSignals = countKeywords(combined, SOLUTION_KEYWORDS);
@@ -234,33 +328,40 @@ function mockEvaluate(input: SubmissionInput, context: AIValidationContext): AIV
   if (context.rubric) {
     for (const criterion of context.rubric) {
       const keywords = CRITERION_KEYWORDS[criterion.id] ?? CLARITY_KEYWORDS;
-      if (countKeywords(combined, keywords) >= 1) rubricBonus += 5;
+      if (countKeywords(combined, keywords) >= 1) rubricBonus += 3;
     }
   }
 
-  // Length contributes up to ~50 points, signals up to ~35, rubric bonus up to ~15
-  const lengthScore = clamp(length / 8, 0, 50);
-  const signalScore = clamp(totalSignals * 7, 0, 35);
-  const score = Math.round(clamp(lengthScore + signalScore + rubricBonus, 0, 100));
+  const words = combined.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
+  const uniqueRatio = words.length ? new Set(words).size / words.length : 0;
+  const vocabularyBonus = clamp((uniqueRatio - 0.5) * 30, 0, 15);
 
-  // Confidence grows with both length and signal density; deliberately capped at 0.92
+  // Length contributes up to ~35 pts, signals up to ~25, rubric bonus up to ~21,
+  // vocabulary diversity up to ~15 — total caps at 100.
+  const lengthScore = clamp(length / 10, 0, 35);
+  const signalScore = clamp(totalSignals * 5, 0, 25);
+  const score = Math.round(clamp(lengthScore + signalScore + rubricBonus + vocabularyBonus, 0, 100));
+
+  // Confidence grows with both length and signal density; capped at 0.90
   // so the mock never appears certain enough to bypass teacher review.
-  const confidence = round2(clamp(0.28 + length / 1400 + totalSignals * 0.05, 0.28, 0.92));
+  const confidence = round2(clamp(0.30 + length / 1600 + totalSignals * 0.04 + uniqueRatio * 0.15, 0.30, 0.90));
 
-  const hasEvidence = input.evidenceText.trim().length > 0;
-  const valid = score >= 45 && length >= 30;
+  const hasEvidence = cleanEvidence.length >= 10;
+  const valid = score >= 50 && length >= 40 && totalSignals >= 1 && hasEvidence;
 
   // Formative bias: low confidence, weak evidence, borderline score → teacher review
-  const suggestedTeacherReview = !valid || confidence < 0.75 || !hasEvidence;
+  const suggestedTeacherReview = !valid || confidence < 0.78 || !hasEvidence || totalSignals < 2;
 
   const reasons = buildReasons(context, { score, hasEvidence, combined });
-  const detectedCompetencies = buildDetectedCompetencies(context, {
-    evidenceSignals,
-    solutionSignals,
-    reflectionSignals,
-    communitySignals: countKeywords(combined, COMMUNITY_KEYWORDS),
-    problemSignals,
-  });
+  const detectedCompetencies = valid
+    ? buildDetectedCompetencies(context, {
+        evidenceSignals,
+        solutionSignals,
+        reflectionSignals,
+        communitySignals: countKeywords(combined, COMMUNITY_KEYWORDS),
+        problemSignals,
+      })
+    : [];
 
   return {
     valid,

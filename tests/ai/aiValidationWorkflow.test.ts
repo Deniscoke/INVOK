@@ -48,8 +48,9 @@ describe('aiValidationWorkflow', () => {
   it('confidence is capped below 1 (never appears certain)', async () => {
     const result = await validateSubmission({
       missionId: 'map_school_problem',
-      studentResponse: 'x'.repeat(500),
-      evidenceText: 'dôkaz evidence zdroj údaj pretože lebo',
+      studentResponse:
+        'V jedálni je dlhý rad pretože triedy chodia spolu. Navrhujem rozvrh príchodu, lebo to skráti čakanie. Zistil som, že prestávky sú krátke a žiaci nestíhajú.',
+      evidenceText: 'Tri dni som meral čas čakania, najdlhší bol 12 minút.',
       evidenceType: 'text',
     });
     expect(result.confidence).toBeLessThan(1);
@@ -58,9 +59,20 @@ describe('aiValidationWorkflow', () => {
 
   it('returns reasons for every rubric criterion', async () => {
     const result = await validateSubmission(
-      { missionId: 'reflect_growth', studentResponse: 'x'.repeat(40), evidenceText: '', evidenceType: 'text' },
+      {
+        missionId: 'reflect_growth',
+        studentResponse:
+          'Spočiatku som nevedel, ako začať reflektovať svoj rast. Postupne som zistil, čo mi pomáha. Nabudúce by som chcel skúsiť písať si denník po každej hodine.',
+        evidenceText: 'Skúsil som si zapisovať postrehy po každej hodine, vznikol mi krátky denník.',
+        evidenceType: 'text',
+      },
       { rubric, targetCompetencies: [] },
     );
-    expect(result.reasons).toHaveLength(rubric.length);
+    // Every rubric criterion must be covered. Additional reasons (e.g. an
+    // "Zrozumiteľnosť vstupu" entry for gibberish) are allowed on top.
+    expect(result.reasons.length).toBeGreaterThanOrEqual(rubric.length);
+    for (const criterion of rubric) {
+      expect(result.reasons.some((r) => r.criterion === criterion.label)).toBe(true);
+    }
   });
 });
