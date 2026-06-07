@@ -247,6 +247,14 @@ export async function signOut(): Promise<void> {
   if (isSupabaseConfigured && supabase) await supabase.auth.signOut();
   saveDemoUser(null);
   localStorage.removeItem(STUDENT_TOKEN_KEY);
+  // Lazy import to avoid a top-level circular dependency
+  // (dashboardApi → authService.getSnapshot()).
+  try {
+    const { clearCachedClasses } = await import('./dashboardApi');
+    clearCachedClasses();
+  } catch {
+    /* ignore — cache is best-effort */
+  }
   snapshot = { mode: snapshot.mode, user: null };
   emit();
 }

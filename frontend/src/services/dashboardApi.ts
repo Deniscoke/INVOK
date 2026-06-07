@@ -1,9 +1,19 @@
 /**
  * Frontend dashboard API client.
- * Sends the teacher's Supabase JWT (if any). On any failure (no API / 403 /
- * offline) it falls back to SAFE anonymized mock data — never PII.
+ *
+ * Sends the teacher's Supabase JWT (if any). On failure we behave differently
+ * based on the account scope:
+ *
+ *   • Real Supabase teacher → return an EMPTY dashboard (zeros) so the user
+ *     sees the true state of their account instead of fake demo numbers.
+ *     Locally cached classes (created via /pilot while the API was down) are
+ *     still surfaced so the dashboard reflects what the teacher just set up.
+ *
+ *   • Demo mode (no Supabase) → keep the rich anonymized mock data — handy
+ *     for offline demos and pitch decks.
  */
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { getSnapshot } from './authService';
 
 export interface DashboardSummary {
   studentsCount: number;
@@ -47,7 +57,22 @@ export interface DashboardData {
   competencies: CompetencyItem[];
   proposals: ProblemProposalSummary;
   reviews: ReviewStats;
-  source: 'api' | 'mock';
+  /**
+   * `api`   — numbers came from the real backend
+   * `mock`  — anonymized demo numbers (no Supabase configured)
+   * `empty` — real Supabase account, API unreachable: show clean zeros
+   */
+  source: 'api' | 'mock' | 'empty';
+}
+
+/**
+ * A "real" teacher account = Supabase is configured AND someone is logged in
+ * as a teacher/admin. Used to pick between empty-state and demo-mock fallbacks.
+ */
+export function isRealTeacherAccount(): boolean {
+  if (!isSupabaseConfigured) return false;
+  const user = getSnapshot().user;
+  return user?.role === 'teacher' || user?.role === 'admin';
 }
 
 export interface DashboardFilterParams {
@@ -85,14 +110,86 @@ export interface DashboardClass {
   name: string;
 }
 
-/** Real classes for the current teacher/admin (demo fallback if no API). */
+// ---------------------------------------------------------------------------
+// Local class cache
+// ---------------------------------------------------------------------------
+// While the serverless API may be temporarily unavailable, classes created
+// via /pilot still get an id (mock or real). We cache the minimum metadata
+// per-user so the dashboard can reflect them between page loads.
+// ---------------------------------------------------------------------------
+
+const CLASS_CACHE_PREFIX = 'invok_dashboard_classes:';
+
+function classCacheKey(): string {
+  const user = getSnapshot().user;
+  return `${CLASS_CACHE_PREFIX}${user?.id ?? 'demo'}`;
+}
+
+function readCachedClasses(): DashboardClass[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(classCacheKey());
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((c): c is DashboardClass => !!c && typeof (c as DashboardClass).id === 'string' && typeof (c as DashboardClass).name === 'string')
+      .map((c) => ({ id: c.id, name: c.name }));
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedClasses(classes: DashboardClass[]): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(classCacheKey(), JSON.stringify(classes));
+  } catch {
+    /* ignore quota / privacy errors */
+  }
+}
+
+/** Remember a class created via /pilot so the dashboard can show it offline. */
+export function rememberClass(input: DashboardClass): void {
+  if (!input.id || !input.name) return;
+  const existing = readCachedClasses();
+  if (existing.some((c) => c.id === input.id)) return;
+  writeCachedClasses([...existing, { id: input.id, name: input.name }]);
+}
+
+/** Cached classes for the current user (empty in demo mode). */
+export function getCachedClasses(): DashboardClass[] {
+  return isRealTeacherAccount() ? readCachedClasses() : [];
+}
+
+/** Drop the local class cache (e.g. on sign-out). */
+export function clearCachedClasses(): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.removeItem(classCacheKey());
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Real classes for the current teacher/admin.
+ *
+ *   • API ok           → real classes (and we refresh the local cache).
+ *   • API down + real  → locally cached classes (may be empty).
+ *   • API down + demo  → two anonymized demo classes so the offline pitch
+ *                        deck still renders something sensible.
+ */
 export async function fetchClasses(): Promise<DashboardClass[]> {
   try {
     const res = await fetch('/api/dashboard/classes', { headers: await authHeaders() });
     if (!res.ok) throw new Error();
     const data = (await res.json()) as { classes: DashboardClass[] };
-    return data.classes.map((c) => ({ id: c.id, name: c.name }));
+    const classes = data.classes.map((c) => ({ id: c.id, name: c.name }));
+    if (isRealTeacherAccount()) writeCachedClasses(classes);
+    return classes;
   } catch {
+    if (isRealTeacherAccount()) return readCachedClasses();
     return [
       { id: 'demo-class-a', name: 'Trieda 5.A' },
       { id: 'demo-class-b', name: 'Trieda 5.B' },
@@ -112,7 +209,7 @@ export async function fetchDashboard(params: DashboardFilterParams): Promise<Das
     ]);
     return { summary, competencies: competencies.competencies, proposals, reviews, source: 'api' };
   } catch {
-    return mockDashboard();
+    return isRealTeacherAccount() ? emptyDashboard() : mockDashboard();
   }
 }
 
@@ -153,6 +250,31 @@ export function mockDashboard(): DashboardData {
     competencies: MOCK_COMPETENCIES,
     proposals: { count: 31, avgProblemQualityScore: 72, avgProvisionalXp: 18, avgFinalXp: 14, needsTeacherReview: 9 },
     reviews: { approved: 20, adjusted: 14, needsRevision: 8, rejected: 2, avgAiScore: 76, avgTeacherScore: 72, avgScoreDelta: -4 },
+  };
+}
+
+/**
+ * Empty dashboard shape for a real Supabase account when the API is unreachable.
+ * The class count reflects locally cached classes (created via /pilot) so the
+ * teacher still sees their own setup progress even while the backend recovers.
+ */
+export function emptyDashboard(): DashboardData {
+  const cachedClasses = readCachedClasses().length;
+  return {
+    source: 'empty',
+    summary: {
+      studentsCount: 0,
+      classesCount: cachedClasses,
+      missionsCount: 0,
+      submissionsCount: 0,
+      reviewedCount: 0,
+      pendingReviewCount: 0,
+      problemProposalsCount: 0,
+      totalFinalXp: 0,
+    },
+    competencies: [],
+    proposals: { count: 0, avgProblemQualityScore: 0, avgProvisionalXp: 0, avgFinalXp: 0, needsTeacherReview: 0 },
+    reviews: { approved: 0, adjusted: 0, needsRevision: 0, rejected: 0, avgAiScore: 0, avgTeacherScore: 0, avgScoreDelta: 0 },
   };
 }
 

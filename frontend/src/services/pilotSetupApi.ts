@@ -6,6 +6,7 @@
  */
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { getSnapshot } from './authService';
+import { rememberClass } from './dashboardApi';
 
 export interface EntityResult {
   ok: boolean;
@@ -68,12 +69,18 @@ export async function createSchool(input: { schoolName: string; region?: string 
 
 export async function createClass(input: { schoolId: string; className: string; grade?: number }): Promise<EntityResult> {
   try {
-    return { ...(await post<EntityResult>('/api/admin/classes', input)), source: 'api' };
+    const result = { ...(await post<EntityResult>('/api/admin/classes', input)), source: 'api' as const };
+    if (result.ok && result.id) rememberClass({ id: result.id, name: result.name ?? input.className });
+    return result;
   } catch {
     if (isSupabaseConfigured && !getSnapshot().user) {
       return { ok: false, error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.', source: 'mock' };
     }
-    return { ok: true, id: `demo-class-${Date.now()}`, name: input.className, source: 'mock' };
+    const fallback: EntityResult = { ok: true, id: `demo-class-${Date.now()}`, name: input.className, source: 'mock' };
+    // Even in the mock path remember the class locally so the dashboard can
+    // surface it for the logged-in teacher until the real API comes back.
+    if (fallback.id) rememberClass({ id: fallback.id, name: fallback.name ?? input.className });
+    return fallback;
   }
 }
 
