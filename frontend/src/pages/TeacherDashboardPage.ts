@@ -49,8 +49,8 @@ function realAccountWelcome(): string {
       Hneď ako odovzdajú prvé misie, uvidíš ich tu.
     </p>
     <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4)">
-      <a class="btn btn--primary" href="/pilot" data-link>${icon('compass', 16)} Otvoriť pilot setup</a>
-      <a class="btn btn--ghost" href="/student" data-link>${icon('book', 16)} Pozrieť žiacke prostredie</a>
+      <a class="btn btn--primary" href="#/pilot">${icon('compass', 16)} Otvoriť pilot setup</a>
+      <a class="btn btn--ghost" href="#/student">${icon('book', 16)} Pozrieť žiacke prostredie</a>
     </div>
   </section>`;
 }
@@ -65,7 +65,7 @@ function myClassesCard(classes: DashboardClass[]): string {
           <strong>${escapeHtml(c.name)}</strong>
           <div class="muted" style="font-size:var(--fs-xs)">${escapeHtml(c.id)}</div>
         </div>
-        <a class="btn btn--ghost btn--sm" href="/pilot" data-link>Spravovať</a>
+        <a class="btn btn--ghost btn--sm" href="#/pilot">Spravovať</a>
       </li>`;
     })
     .join('');
@@ -274,7 +274,7 @@ function sourceNote(source: DashboardData['source']): string {
     return '<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Demo (anonymizované) dáta — pripoj Supabase pre reálne čísla.</p>';
   }
   if (source === 'empty') {
-    return '<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Tvoj účet zatiaľ nemá žiadne dáta. Vytvor triedu a žiakov v <a href="/pilot" data-link>pilot setupe</a>.</p>';
+    return '<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Tvoj účet zatiaľ nemá žiadne dáta. Vytvor triedu a žiakov v <a href="#/pilot">pilot setupe</a>.</p>';
   }
   return '';
 }

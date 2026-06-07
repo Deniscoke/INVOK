@@ -31,6 +31,20 @@ function currentPath(): string {
   return hash.length > 0 ? hash : '/';
 }
 
+/**
+ * Promote a path-based URL (e.g. /pilot, /teacher) into the hash-based router
+ * we actually use. This makes direct links and bookmarks like /pilot keep
+ * working: Vercel rewrites every non-API path to index.html, then we move the
+ * intended route into the hash before the first render.
+ */
+function normalizeUrlToHash(): void {
+  if (typeof window === 'undefined') return;
+  const { pathname, search, hash } = window.location;
+  if (hash || pathname === '/' || pathname === '') return;
+  const target = `/#${pathname}${search}`;
+  window.history.replaceState(null, '', target);
+}
+
 function header(activePath: string): string {
   const links = routes
     .filter((route) => route.inNav)
@@ -76,5 +90,6 @@ function render(): void {
 
 onAuthChange(render);
 window.addEventListener('hashchange', render);
+normalizeUrlToHash();
 render();
 void initAuth();
