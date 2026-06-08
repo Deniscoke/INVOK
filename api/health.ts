@@ -11,8 +11,6 @@
  *                  values never leave the server).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getServerEnv } from '../backend/lib/env';
-import { getSupabaseAdmin } from '../backend/lib/supabaseAdmin';
 
 interface CheckResult {
   ok: boolean;
@@ -86,11 +84,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // larger routes (admin, dashboard, submissions, ...).
   const checks: Record<string, CheckResult> = {};
 
-  // backend/lib/env is statically imported at the top of this file, so if
-  // we got this far it bundled correctly. We still time the call to record
-  // a baseline for cold-start vs warm latency.
   const envCheck = await timed(async () => {
-    const env = getServerEnv();
+    const mod = await import('../backend/lib/env');
+    const env = mod.getServerEnv();
     return {
       appEnv: env.appEnv,
       missingSupabaseUrl: !env.supabaseUrl,
@@ -111,7 +107,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   });
   checks.npmImport_openai = asResult(openaiImport);
 
-  const adminCheck = await timed(async () => Boolean(getSupabaseAdmin()));
+  const adminCheck = await timed(async () => {
+    const mod = await import('../backend/lib/supabaseAdmin');
+    return Boolean(mod.getSupabaseAdmin());
+  });
   // This one can legitimately fail when env vars are missing — that's
   // information, not a deployment bug.
   checks.supabaseAdmin_construct = asResult(adminCheck);

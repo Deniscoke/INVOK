@@ -5,7 +5,6 @@ import { getMissionById } from '../../backend/services/missionService';
 import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
 import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit';
 import { getServerEnv, missingServerSecrets } from '../../backend/lib/env';
-import { getSupabaseAdmin } from '../../backend/lib/supabaseAdmin';
 
 /**
  * POST /api/ai/validate-submission
@@ -52,6 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
     try {
+      const { getSupabaseAdmin } = await import('../../backend/lib/supabaseAdmin');
       const admin = getSupabaseAdmin();
       const { data: sub } = await admin
         .from('submissions')
