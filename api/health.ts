@@ -11,11 +11,6 @@
  *                  values never leave the server).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// PROBE: static import from api/_lib/. If this endpoint stays healthy and
-// `apiLibProbe` reports ok in deep mode, @vercel/node bundles files under
-// api/_lib correctly — that justifies moving backend/{lib,services} there
-// to fix all the FUNCTION_INVOCATION_FAILED errors elsewhere.
-import { envProbeOk } from './_lib/_env_probe';
 
 interface CheckResult {
   ok: boolean;
@@ -119,9 +114,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // This one can legitimately fail when env vars are missing — that's
   // information, not a deployment bug.
   checks.supabaseAdmin_construct = asResult(adminCheck);
-
-  const probeCheck = await timed(() => envProbeOk());
-  checks.apiLibProbe = asResult(probeCheck);
 
   res.status(200).json({
     ...base,
