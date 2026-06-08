@@ -8,6 +8,7 @@
  * Do NOT import from frontend code.
  */
 import { getServerEnv, missingServerSecrets } from './env';
+import { getSupabaseAdmin } from './supabaseAdmin';
 
 export interface ServerUser {
   userId: string;
@@ -35,7 +36,6 @@ function isConfigured(): boolean {
 
 export async function getUserFromToken(token: string | undefined): Promise<ServerUser | null> {
   if (!token || !isConfigured()) return null;
-  const { getSupabaseAdmin } = await import('./supabaseAdmin');
   const { data, error } = await getSupabaseAdmin().auth.getUser(token);
   if (error || !data.user) return null;
   return { userId: data.user.id };
@@ -43,7 +43,6 @@ export async function getUserFromToken(token: string | undefined): Promise<Serve
 
 export async function getProfile(userId: string): Promise<ServerProfile | null> {
   if (!isConfigured()) return null;
-  const { getSupabaseAdmin } = await import('./supabaseAdmin');
   const { data, error } = await getSupabaseAdmin()
     .from('profiles')
     .select('id, role, display_name, level, total_xp')

@@ -12,6 +12,7 @@
  */
 import type { SubmissionInput } from '../validators/submissionValidator';
 import { getServerEnv, shouldUseOpenAI } from '../lib/env';
+import { getOpenAIClient } from '../lib/openaiClient';
 import { getMissionById, getCompetencies } from './missionService';
 import {
   AI_VALIDATION_SYSTEM_PROMPT,
@@ -170,7 +171,6 @@ export async function openAIValidateSubmission(
 ): Promise<AIValidationResult> {
   const env = getServerEnv();
   try {
-    const { getOpenAIClient } = await import('../lib/openaiClient');
     const client = getOpenAIClient();
     if (!client) {
       return { ...mockEvaluate(input, context), source: 'mock_fallback' };

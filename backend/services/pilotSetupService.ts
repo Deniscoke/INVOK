@@ -15,6 +15,7 @@ import type { RequestContext } from '../lib/requestContext';
 import { isTeacherOrAdmin } from '../lib/requestContext';
 import { getServerEnv, missingServerSecrets } from '../lib/env';
 import { generateCode, hashCode } from '../lib/hash';
+import { getSupabaseAdmin } from '../lib/supabaseAdmin';
 import {
   validateSchoolInput,
   validateClassInput,
@@ -86,7 +87,6 @@ export async function createSchool(ctx: RequestContext, raw: unknown): Promise<C
     return { ok: true, id: `mock-school-${v.value.slug ?? 'demo'}`, name: v.value.name, source: 'mock' };
   }
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     const { data, error } = await admin.from('schools').insert({ name: v.value.name, region: v.value.region ?? null }).select('id, name').single();
     if (error || !data) return { ok: false, error: 'Vytvorenie školy zlyhalo.', source: 'db' };
@@ -108,7 +108,6 @@ export async function createClass(ctx: RequestContext, raw: unknown): Promise<Cr
     return { ok: true, id: 'mock-class', name: v.value.name, source: 'mock' };
   }
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     if (!setupMode() && !(await managesSchool(admin, ctx, v.value.schoolId))) {
       return { ok: false, error: 'Škola nie je vo vašom rozsahu.', source: 'db' };
@@ -132,7 +131,6 @@ export async function addTeacherToSchool(ctx: RequestContext, raw: unknown): Pro
     return { ok: true, status: 'pending', message: 'Demo: učiteľ by bol pozvaný po registrácii.', source: 'mock' };
   }
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     if (!v.value.teacherUserId) {
       return { ok: true, status: 'pending', message: 'Učiteľ sa musí najprv zaregistrovať (Supabase user + profil), potom ho pridáme cez teacherUserId.', source: 'db' };
@@ -163,7 +161,6 @@ export async function generateStudentAccessCodes(ctx: RequestContext, raw: unkno
     return { ok: true, classId: v.value.classId, codes, oneTimeView: true, source: 'mock' };
   }
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     if (!(await managesClass(admin, ctx, v.value.classId))) return { ok: false, oneTimeView: true, source: 'db', error: 'Trieda nie je vo vašom rozsahu.' };
     const rows = codes.map((c) => ({ class_id: v.value.classId, pseudonym: c.pseudonym, code_hash: hashCode(c.code), is_active: true, created_by: ctx.userId }));
@@ -184,7 +181,6 @@ export async function listStudentAccessCodes(ctx: RequestContext, classId: strin
     ];
   }
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     if (!(await managesClass(admin, ctx, classId))) return [];
     // NOTE: explicitly excludes code_hash — never returned to clients.
@@ -209,7 +205,6 @@ export async function deactivateStudentAccessCode(ctx: RequestContext, codeId: s
   if (!isTeacherOrAdmin(ctx)) return { ok: false, source: source(), error: 'Forbidden' };
   if (!isConfigured() || ctx.mode !== 'supabase_user') return { ok: true, source: 'mock' };
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     const { data: code } = await admin.from('student_access_codes').select('class_id').eq('id', codeId).maybeSingle();
     const row = code as Record<string, unknown> | null;
@@ -233,7 +228,6 @@ export async function listClassesForTeacher(ctx: RequestContext): Promise<ClassL
     ];
   }
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     if (ctx.role === 'admin') {
       const { data: schools } = await admin.from('school_memberships').select('school_id').eq('user_id', ctx.userId).eq('role', 'admin');

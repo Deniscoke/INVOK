@@ -13,6 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RequestContext } from '../lib/requestContext';
 import { isTeacherOrAdmin } from '../lib/requestContext';
 import { getServerEnv, missingServerSecrets } from '../lib/env';
+import { getSupabaseAdmin } from '../lib/supabaseAdmin';
 import { getMissions, getCompetencies } from './missionService';
 import type { DashboardFilters } from '../validators/dashboardValidator';
 
@@ -311,7 +312,6 @@ async function scopedClassIds(admin: SupabaseClient, ctx: Extract<RequestContext
 
 async function dbLoad(ctx: Extract<RequestContext, { mode: 'supabase_user' }>, filters: DashboardFilters): Promise<{ records: DashboardRecord[]; meta: ScopeMeta }> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
     const classIds = await scopedClassIds(admin, ctx, filters);
     if (classIds.length === 0) return { records: [], meta: { studentsCount: 0, classesCount: 0 } };
