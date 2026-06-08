@@ -25,6 +25,7 @@ import {
   type QuestState,
   type StudentQuest,
 } from '../services/questStore';
+import { submitSolution, type SubmissionResult } from '../services/submissionApi';
 
 let pendingMount: (() => void) | null = null;
 
@@ -65,6 +66,7 @@ function formatDate(iso?: string): string {
 function questCard(q: StudentQuest): string {
   const badge = STATE_BADGES[q.state] ?? STATE_BADGES.draft;
   const canDelete = q.state !== 'approved' && q.state !== 'submitted' && q.state !== 'completed';
+  const canSubmit = q.state === 'approved' || q.state === 'changes_requested';
   return `
   <article class="card" data-quest-id="${escapeHtml(q.id)}" style="border-left:4px solid var(--color-accent, #6366f1)">
     <div class="card-title">
@@ -91,10 +93,57 @@ function questCard(q: StudentQuest): string {
     ${q.teacherFeedback ? `<div class="teacher-hint" style="margin-top:var(--space-3)">
       <div class="teacher-hint__label">Spätná väzba učiteľa</div>${escapeHtml(q.teacherFeedback)}
     </div>` : ''}
+    ${canSubmit ? renderSubmitPanel(q) : ''}
+    ${q.state === 'submitted' ? renderSubmittedHint() : ''}
+    ${q.state === 'completed' ? renderCompletedHint() : ''}
     ${canDelete
       ? `<div style="margin-top:var(--space-3)"><button type="button" class="btn btn--ghost btn--sm" data-action="delete-quest" data-quest-id="${escapeHtml(q.id)}">Zmazať</button></div>`
       : ''}
   </article>`;
+}
+
+function renderSubmitPanel(q: StudentQuest): string {
+  return `
+  <details class="card" style="margin-top:var(--space-3);background:var(--tint-success, #ecfdf5);border-left:4px solid var(--color-success);padding:var(--space-3)">
+    <summary style="cursor:pointer;font-weight:600">✅ Odovzdaj riešenie tejto misie</summary>
+    <form class="stack" data-submit-form="${escapeHtml(q.id)}" style="margin-top:var(--space-3)" novalidate>
+      <label class="field">Tvoja odpoveď / popis riešenia
+        <textarea data-submit-field="solutionSummary" rows="4" minlength="20" maxlength="3000" required
+          placeholder="Opíš, čo si urobil/a alebo navrhuješ pre splnenie cieľa misie."></textarea>
+      </label>
+      <label class="field">Dôkaz alebo pozorovanie
+        <textarea data-submit-field="evidence" rows="3" maxlength="2000" required
+          placeholder="Čo si zmeral/a, videl/a alebo zistil/a?"></textarea>
+      </label>
+      <label class="field">Prvý konkrétny krok
+        <textarea data-submit-field="firstStep" rows="2" maxlength="1000" required
+          placeholder="Čo urobíš ako prvé alebo si už urobil/a?"></textarea>
+      </label>
+      <label class="field">Prínos / koho sa to týka (voliteľné)
+        <input type="text" data-submit-field="impact" maxlength="500"
+          placeholder="napr. žiaci v jedálni, susedstvo školy...">
+      </label>
+      <p class="muted" data-submit-msg="${escapeHtml(q.id)}" role="status" aria-live="polite" style="margin:0"></p>
+      <div data-submit-result="${escapeHtml(q.id)}"></div>
+      <button class="btn btn--primary" type="submit" data-submit-btn="${escapeHtml(q.id)}">Odovzdať na AI + učiteľa</button>
+    </form>
+  </details>`;
+}
+
+function renderSubmittedHint(): string {
+  return `
+  <div class="teacher-hint" style="margin-top:var(--space-3);border-left-color:var(--color-accent)">
+    <div class="teacher-hint__label">Odovzdané — čaká na učiteľa</div>
+    AI už misiu posúdila, učiteľ potvrdí výsledok a pridelí finálne XP.
+  </div>`;
+}
+
+function renderCompletedHint(): string {
+  return `
+  <div class="teacher-hint" style="margin-top:var(--space-3);border-left-color:var(--color-success);background:var(--tint-success, #ecfdf5)">
+    <div class="teacher-hint__label" style="color:#15803d">🏆 Misia dokončená</div>
+    Učiteľ potvrdil dokončenie. XP a kompetencie sú zarátané.
+  </div>`;
 }
 
 function emptyStateCard(): string {
@@ -199,6 +248,7 @@ export function StudentQuestsPage(): string {
     bindDelete();
     bindProposeForm();
     bindAiForm();
+    bindSubmitForms();
   };
 
   return `
@@ -399,6 +449,98 @@ function bindAiForm(): void {
     }
     await refreshQuests();
   });
+}
+
+function readSubmitField(form: HTMLFormElement, name: string): string {
+  const el = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[data-submit-field="${name}"]`);
+  return el?.value.trim() ?? '';
+}
+
+function renderSubmitResult(slot: HTMLElement, result: SubmissionResult): void {
+  if (!result.ok) {
+    slot.innerHTML = `<div class="teacher-hint" style="border-left-color:var(--color-danger)">
+      <div class="teacher-hint__label" style="color:var(--color-danger)">Odovzdanie zlyhalo</div>
+      ${escapeHtml(result.error ?? 'Skús to znova.')}
+    </div>`;
+    return;
+  }
+  const ev = result.evaluation;
+  if (!ev) {
+    slot.innerHTML = `<div class="teacher-hint" style="border-left-color:var(--color-success)">
+      <div class="teacher-hint__label" style="color:#15803d">Odovzdané</div>
+      Učiteľ potvrdí výsledok a pridelí finálne XP.
+    </div>`;
+    return;
+  }
+  const conf = Math.round(ev.confidence * 100);
+  const reasonRows = (ev.reasons ?? []).slice(0, 6).map((r) => `
+    <li style="margin:4px 0">
+      <strong>${escapeHtml(r.criterion)}</strong>: ${escapeHtml(r.explanation)}
+      <span class="chip ${r.result === 'met' ? 'chip--accent' : r.result === 'partial' ? 'chip--warm' : 'chip--muted'}" style="margin-left:6px">${r.result}</span>
+    </li>`).join('');
+  slot.innerHTML = `
+  <div class="card" style="margin-top:var(--space-3);border-left:4px solid ${ev.valid ? 'var(--color-success)' : '#f59e0b'}">
+    <div class="card-title">
+      <div><div class="muted" style="font-size:var(--fs-xs)">AI spätná väzba (${escapeHtml(ev.model)})</div>
+        <h4 style="margin:4px 0 0">Skóre ${ev.score} / 100 · istota ${conf} %</h4></div>
+      <span class="chip ${ev.valid ? 'chip--accent' : 'chip--warm'}">${ev.valid ? 'platné' : 'na úpravu'}</span>
+    </div>
+    ${result.xpAwarded ? `<p class="muted" style="margin:8px 0 0">Predbežné XP: <strong>${result.xpAwarded}</strong> (učiteľ potvrdí).</p>` : ''}
+    ${reasonRows ? `<ul style="margin:var(--space-3) 0 0;padding-left:18px">${reasonRows}</ul>` : ''}
+    ${ev.suggestedTeacherReview ? `<p class="muted" style="margin:8px 0 0;font-size:var(--fs-sm)">AI navrhuje, aby výsledok ešte posúdil učiteľ.</p>` : ''}
+  </div>`;
+}
+
+function bindSubmitForms(): void {
+  for (const form of Array.from(document.querySelectorAll<HTMLFormElement>('form[data-submit-form]'))) {
+    const questId = form.getAttribute('data-submit-form') ?? '';
+    const msg = document.querySelector<HTMLElement>(`[data-submit-msg="${questId}"]`);
+    const slot = document.querySelector<HTMLElement>(`[data-submit-result="${questId}"]`);
+    const btn = document.querySelector<HTMLButtonElement>(`[data-submit-btn="${questId}"]`);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (msg) msg.textContent = '';
+      const quest = state.quests.find((q) => q.id === questId);
+      if (!quest) return;
+
+      const solutionSummary = readSubmitField(form, 'solutionSummary');
+      const evidence = readSubmitField(form, 'evidence');
+      const firstStep = readSubmitField(form, 'firstStep');
+      const impact = readSubmitField(form, 'impact');
+
+      if (solutionSummary.length < 20) {
+        if (msg) msg.textContent = 'Popis riešenia musí mať aspoň 20 znakov.';
+        return;
+      }
+      if (evidence.length < 5) {
+        if (msg) msg.textContent = 'Doplň dôkaz alebo pozorovanie (min. 5 znakov).';
+        return;
+      }
+      if (firstStep.length < 5) {
+        if (msg) msg.textContent = 'Napíš konkrétny prvý krok (min. 5 znakov).';
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'Odosielam…'; }
+      const result = await submitSolution({
+        missionId: quest.title.slice(0, 60),
+        solutionSummary,
+        evidence,
+        firstStep,
+        impact: impact || undefined,
+        studentQuestId: questId,
+      });
+      if (btn) { btn.disabled = false; btn.textContent = 'Odovzdať na AI + učiteľa'; }
+
+      if (slot) renderSubmitResult(slot, result);
+
+      if (result.ok) {
+        // Quest moved to `submitted` server-side — refresh to reflect the new
+        // state badge + the post-submit hint card.
+        setTimeout(() => { void refreshQuests(); }, 1200);
+      }
+    });
+  }
 }
 
 export function mountStudentQuestsPage(): void {

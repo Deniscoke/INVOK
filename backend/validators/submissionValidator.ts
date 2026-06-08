@@ -20,6 +20,7 @@ export const SUBMISSION_LIMITS = {
   responseMax: 5_000,
   evidenceMax: 5_000,
   classIdMax: 80,
+  studentQuestIdMax: 80,
 } as const;
 
 // Patterns that indicate attempted HTML/script injection.
@@ -40,6 +41,9 @@ export interface SubmissionInput {
   evidenceType: EvidenceType;
   classId?: string;
   submissionKind?: SubmissionKind;
+  /** Optional link to a student-proposed quest. When set, the AI rubric is
+   *  built from the quest's own goal/evidence rather than the catalog mission. */
+  studentQuestId?: string;
 }
 
 export interface SubmissionQueryFilter {
@@ -139,6 +143,16 @@ export function validateSubmissionInput(raw: unknown): SubmissionValidationResul
     }
   }
 
+  const studentQuestId = body.studentQuestId;
+  let normalizedQuestId: string | undefined;
+  if (studentQuestId !== undefined && studentQuestId !== null) {
+    if (typeof studentQuestId !== 'string' || studentQuestId.length > SUBMISSION_LIMITS.studentQuestIdMax) {
+      issues.push({ field: 'studentQuestId', message: 'studentQuestId musí byť reťazec (max 80 znakov).' });
+    } else if (studentQuestId.trim().length > 0) {
+      normalizedQuestId = studentQuestId.trim();
+    }
+  }
+
   if (issues.length > 0) {
     return { ok: false, issues };
   }
@@ -152,6 +166,7 @@ export function validateSubmissionInput(raw: unknown): SubmissionValidationResul
       evidenceType: body.evidenceType as EvidenceType,
       classId: typeof classId === 'string' ? classId.trim() : undefined,
       submissionKind,
+      studentQuestId: normalizedQuestId,
     },
   };
 }

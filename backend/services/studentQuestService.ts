@@ -284,6 +284,93 @@ export async function deleteOwnQuest(
 }
 
 // ---------------------------------------------------------------------------
+// Submission integration (called from submissionService when a student
+// odovzdá riešenie a uvedie `studentQuestId`).
+// ---------------------------------------------------------------------------
+
+/**
+ * Load a quest by id for a given pseudonymous student. Returns null if the
+ * quest does not belong to the student, or if Supabase isn't configured.
+ *
+ * Caller is expected to enforce that the state is `approved` (or
+ * `changes_requested`) before allowing a submission.
+ */
+export async function loadQuestForStudent(
+  studentAccessCodeId: string,
+  questId: string,
+): Promise<StudentQuest | null> {
+  if (!isConfigured()) return null;
+  try {
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from('student_quests')
+      .select('*, student_access_codes(pseudonym)')
+      .eq('id', questId)
+      .maybeSingle();
+    const row = data as Record<string, unknown> | null;
+    if (!row) return null;
+    if (row.student_access_code_id !== studentAccessCodeId) return null;
+    return mapRow(row);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Mark a quest as `submitted` and link the submission back to it.
+ *
+ * Idempotent — safe to call if the quest is already `submitted` or
+ * `completed`. Logs but does not throw on DB errors (a failed transition
+ * must never break the submission flow).
+ */
+export async function markQuestSubmitted(questId: string, submissionId: string): Promise<void> {
+  if (!isConfigured()) return;
+  try {
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
+    const admin = getSupabaseAdmin();
+    await admin
+      .from('student_quests')
+      .update({ state: 'submitted', submission_id: submissionId })
+      .eq('id', questId)
+      .in('state', ['approved', 'changes_requested']);
+  } catch {
+    /* best-effort */
+  }
+}
+
+/**
+ * Reflect a teacher review back into the quest state.
+ *   - approved / adjusted  → completed
+ *   - needs_revision       → changes_requested (student can edit + resubmit)
+ *   - rejected             → rejected (terminal)
+ *
+ * Idempotent and silent on errors.
+ */
+export async function reflectReviewOnQuest(
+  submissionId: string,
+  decision: 'approved' | 'adjusted' | 'needs_revision' | 'rejected',
+): Promise<void> {
+  if (!isConfigured()) return;
+  try {
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
+    const admin = getSupabaseAdmin();
+    const nextState: QuestState | null =
+      decision === 'approved' || decision === 'adjusted' ? 'completed' :
+      decision === 'needs_revision' ? 'changes_requested' :
+      decision === 'rejected' ? 'rejected' :
+      null;
+    if (!nextState) return;
+    await admin
+      .from('student_quests')
+      .update({ state: nextState })
+      .eq('submission_id', submissionId);
+  } catch {
+    /* best-effort */
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Teacher-side operations
 // (called from /api/teacher/* under an authenticated Supabase request context)
 // ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ import {
 } from '../validators/teacherReviewValidator.js';
 import { getMissionById } from './missionService.js';
 import { applyXp, finalXpForReview, levelForXp } from './progressService.js';
+import { reflectReviewOnQuest } from './studentQuestService.js';
 
 export interface TeacherReviewRecord {
   id: string;
@@ -158,6 +159,10 @@ async function dbCreateReview(ctx: RequestContext, input: TeacherReviewInput): P
       finalXp,
       newStatus,
     });
+
+    // If this submission belongs to a student-proposed quest, reflect the
+    // review back into the quest's state machine (best-effort, never blocks).
+    await reflectReviewOnQuest(input.submissionId, input.decision);
 
     const row = reviewData as Record<string, unknown>;
     return {

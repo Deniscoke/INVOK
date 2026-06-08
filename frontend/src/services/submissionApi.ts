@@ -22,6 +22,8 @@ export interface SubmissionPayload {
   evidenceType: 'text';
   classId?: string;
   submissionKind?: SubmissionKind;
+  /** When set, the server evaluates the submission against a student-proposed quest. */
+  studentQuestId?: string;
 }
 
 export interface AiEvaluation {
@@ -80,6 +82,8 @@ export interface SolutionSubmissionFields {
   impact?: string;
   /** Voliteľná fotka ako dôkaz (popis + base64 náhľad) */
   photo?: PhotoEvidence;
+  /** When the submission belongs to a student-proposed quest. */
+  studentQuestId?: string;
 }
 
 function studentToken(): string | null {
@@ -196,6 +200,7 @@ export async function submitSolution(fields: SolutionSubmissionFields): Promise<
     evidenceType: 'text',
     classId: fields.classId,
     submissionKind: 'solution_submission',
+    studentQuestId: fields.studentQuestId,
   }, photo);
 }
 

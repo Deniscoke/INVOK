@@ -16,11 +16,16 @@
  */
 import type { RequestContext } from '../lib/requestContext.js';
 import type { SubmissionInput, SubmissionQueryFilter, SubmissionKind } from '../validators/submissionValidator.js';
-import { validateSubmissionWithAI, type AIValidationResult } from './aiValidationService.js';
+import { validateSubmissionWithAI, type AIValidationResult, type AIValidationContext } from './aiValidationService.js';
 import { scoreProblemProposal } from './problemProposalService.js';
 import { getMissionById } from './missionService.js';
 import { levelForXp } from './progressService.js';
 import { getServerEnv, missingServerSecrets } from '../lib/env.js';
+import {
+  loadQuestForStudent,
+  markQuestSubmitted,
+  type StudentQuest,
+} from './studentQuestService.js';
 
 export interface SubmissionRow {
   id: string;
@@ -65,17 +70,74 @@ function isConfigured(): boolean {
 }
 
 /**
+ * Build an AI rubric from a student-proposed quest. We synthesize criteria
+ * directly from the quest's own content so the AI grades the submission
+ * against what the student (and teacher) committed to, not a generic catalog.
+ */
+function buildQuestRubric(quest: StudentQuest): NonNullable<AIValidationContext['rubric']> {
+  const rubric: NonNullable<AIValidationContext['rubric']> = [
+    {
+      id: 'relevance',
+      label: 'Relevantnosť voči cieľu misie',
+      description: `Reaguje odpoveď na cieľ: „${quest.goal}"?`,
+    },
+    {
+      id: 'evidence',
+      label: 'Dôkaz / pozorovanie',
+      description: quest.evidence
+        ? `Je doložený konkrétny dôkaz alebo pozorovanie (žiak pôvodne uviedol: „${quest.evidence}")?`
+        : 'Je doložený konkrétny dôkaz alebo pozorovanie zo skutočného sveta?',
+    },
+    {
+      id: 'first_step',
+      label: 'Prvý konkrétny krok',
+      description: quest.firstIdea
+        ? `Je uvedený konkrétny prvý krok alebo realizovaná akcia (pôvodný nápad: „${quest.firstIdea}")?`
+        : 'Je uvedený konkrétny prvý krok alebo realizovaná akcia?',
+    },
+    {
+      id: 'value',
+      label: 'Prínos pre cieľovú skupinu',
+      description: quest.affectedGroup
+        ? `Je viditeľný prínos pre cieľovú skupinu „${quest.affectedGroup}"?`
+        : 'Je viditeľný prínos pre konkrétnu skupinu (trieda, škola, komunita)?',
+    },
+    {
+      id: 'clarity',
+      label: 'Jasnosť a štruktúrovanosť',
+      description: 'Je odpoveď jasná, štruktúrovaná a zrozumiteľná?',
+    },
+  ];
+  return rubric;
+}
+
+/**
  * Evaluate a submission by kind. A `problem_proposal` is scored against the
  * problem rubric and earns a provisional reward (10–40%); other kinds use the
  * mission rubric and full XP. XP is provisional until a teacher review.
+ *
+ * When `quest` is provided (student-proposed quest path), the rubric is built
+ * from the quest's own content instead of the catalog mission's rubric.
  */
 async function evaluateSubmission(
   input: SubmissionInput,
+  quest?: StudentQuest | null,
 ): Promise<{ evaluation: AIValidationResult; xpAwarded: number; isProposal: boolean }> {
   if (input.submissionKind === 'problem_proposal') {
     const scored = await scoreProblemProposal(input);
     return { evaluation: scored.evaluation, xpAwarded: scored.provisionalXp, isProposal: true };
   }
+
+  if (quest) {
+    const evaluation = await validateSubmissionWithAI(
+      { ...input, studentResponse: input.evidenceText || input.studentResponse },
+      { rubric: buildQuestRubric(quest), targetCompetencies: [] },
+    );
+    const baseXp = quest.xpEstimate && quest.xpEstimate > 0 ? quest.xpEstimate : 100;
+    const xpAwarded = evaluation.valid ? Math.round(baseXp * (evaluation.score / 100)) : 0;
+    return { evaluation, xpAwarded, isProposal: false };
+  }
+
   const mission = getMissionById(input.missionId);
   const evaluation = await validateSubmissionWithAI(
     { ...input, studentResponse: input.evidenceText || input.studentResponse },
@@ -141,7 +203,9 @@ export async function getStudentProgress(ctx: RequestContext): Promise<{
 // ---------------------------------------------------------------------------
 
 async function mockCreate(_ctx: RequestContext, input: SubmissionInput): Promise<CreateResult> {
-  const { evaluation, xpAwarded, isProposal } = await evaluateSubmission(input);
+  // Mock mode has no Supabase, so we don't have the quest content here.
+  // The submission is still evaluated; we just can't apply the quest rubric.
+  const { evaluation, xpAwarded, isProposal } = await evaluateSubmission(input, null);
   return {
     ok: true,
     submissionId: `mock-${Date.now()}`,
@@ -231,6 +295,26 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
     const studentAccessCodeId = ctx.mode === 'student_session' ? ctx.studentAccessCodeId : null;
     const classId = ctx.mode === 'student_session' ? ctx.classId : (input.classId ?? null);
 
+    // If the submission is tied to a student-proposed quest, verify ownership
+    // and state before we let it through. The rubric (and base XP) will be
+    // derived from the quest itself.
+    let quest: StudentQuest | null = null;
+    if (input.studentQuestId) {
+      if (!studentAccessCodeId) {
+        return { ok: false, error: 'Misiu žiaka môžeš odovzdať len cez študentskú session.' };
+      }
+      quest = await loadQuestForStudent(studentAccessCodeId, input.studentQuestId);
+      if (!quest) {
+        return { ok: false, error: 'Misia nenájdená alebo nepatrí tomuto žiakovi.' };
+      }
+      if (quest.state !== 'approved' && quest.state !== 'changes_requested') {
+        return {
+          ok: false,
+          error: `Misiu môžeš odovzdať až po schválení učiteľom (aktuálny stav: ${quest.state}).`,
+        };
+      }
+    }
+
     const { data: sub, error: subErr } = await admin
       .from('submissions')
       .insert({
@@ -250,8 +334,9 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
     if (subErr || !sub) return { ok: false, error: 'Uloženie odovzdania zlyhalo.' };
     const submissionId = String((sub as Record<string, unknown>).id);
 
-    // Evaluate (problem proposal uses the problem rubric + provisional reward)
-    const { evaluation, xpAwarded, isProposal } = await evaluateSubmission(input);
+    // Evaluate (problem proposal uses the problem rubric + provisional reward;
+    // student-proposed quest uses its own rubric).
+    const { evaluation, xpAwarded, isProposal } = await evaluateSubmission(input, quest);
 
     // Store AI evaluation
     await admin.from('ai_evaluations').insert({
@@ -277,6 +362,13 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
         problem_reward_xp: isProposal ? xpAwarded : 0,
       })
       .eq('id', submissionId);
+
+    // For student-proposed quests: flip the quest to `submitted` and link the
+    // submission. This both blocks resubmits and surfaces the submission in
+    // the teacher's review panel.
+    if (quest && input.studentQuestId) {
+      await markQuestSubmitted(input.studentQuestId, submissionId);
+    }
 
     return {
       ok: true,
