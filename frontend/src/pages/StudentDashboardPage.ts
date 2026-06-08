@@ -10,12 +10,85 @@ import {
   getStudent,
 } from '../services/mockDataService';
 import { getSnapshot } from '../services/authService';
+import { isRealStudentAccount } from '../services/dashboardApi';
 import type { SubmissionResult } from '../services/submissionApi';
 
 let pendingMount: (() => void) | null = null;
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Clean welcome view for a newly-joined real student. Hides the demo XP /
+ * badges / preset missions until the student proposes a quest or a teacher
+ * assigns one — otherwise a fresh account looks like it already earned XP.
+ */
+function realStudentEmptyState(alias: string): string {
+  const safeAlias = escapeHtml(alias);
+  return `
+  <section class="card">
+    <div class="identity">
+      ${Mascot({ size: 72 })}
+      <div>
+        <div class="muted">Pseudonymný žiak</div>
+        <div class="identity__alias">${safeAlias}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:var(--space-5);border-left:4px solid var(--color-accent, #6366f1);background:var(--tint-accent, #eef2ff)">
+    <div class="card-title">
+      <div>
+        <div class="muted">Vitaj v INVOK</div>
+        <h2 style="margin:0">Ahoj, ${safeAlias} 👋</h2>
+      </div>
+      <span class="chip chip--accent">nový účet</span>
+    </div>
+    <p class="muted" style="margin-top:var(--space-3)">
+      Tu zatiaľ nemáš žiadne XP, odznaky ani aktívne misie — všetko sa odomyká postupne,
+      keď navrhneš alebo splníš misiu schválenú učiteľom.
+    </p>
+
+    <div class="grid grid--2" style="margin-top:var(--space-4);gap:var(--space-4)">
+      <div class="card" style="background:var(--color-surface, #fff);border-left:3px solid var(--color-success)">
+        <h3 style="margin-top:0">${'\u2728'} Navrhni si misiu</h3>
+        <p class="muted" style="font-size:var(--fs-sm)">
+          Popíš problém vo svojej škole / komunite a navrhni krok, ktorý urobíš.
+          Učiteľ ti návrh potvrdí a získaš predbežné XP.
+        </p>
+        <a class="btn btn--primary" href="#/quests">Otvoriť návrhy misií</a>
+      </div>
+      <div class="card" style="background:var(--color-surface, #fff);border-left:3px solid var(--color-accent)">
+        <h3 style="margin-top:0">${'\u{1F916}'} Nechaj AI vygenerovať misiu</h3>
+        <p class="muted" style="font-size:var(--fs-sm)">
+          AI ti pripraví návrh misie v súlade s INVOK cieľmi a ŠVP ZV. Učiteľ ho potvrdí
+          alebo upraví, a potom môžeš odovzdať.
+        </p>
+        <a class="btn btn--ghost" href="#/quests?source=ai">Vyžiadať návrh od AI</a>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:var(--space-4);font-size:var(--fs-xs)">
+      Limit: max <strong>5 aktívnych misií</strong> naraz. Nepoužité môžeš zmazať.
+    </p>
+  </section>`;
+}
+
 export function StudentDashboardPage(): string {
   const authUser = getSnapshot().user;
+  const realStudent = isRealStudentAccount();
+
+  if (realStudent) {
+    pendingMount = null;
+    return realStudentEmptyState(authUser?.displayName ?? 'žiak');
+  }
+
   const student = getStudent();
   const alias = authUser?.displayName ?? student.alias;
   const earned = new Set(student.earnedBadgeIds);

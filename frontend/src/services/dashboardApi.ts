@@ -75,6 +75,17 @@ export function isRealTeacherAccount(): boolean {
   return user?.role === 'teacher' || user?.role === 'admin';
 }
 
+/**
+ * Real student = pseudonymous join through the configured Supabase backend.
+ * Used to suppress demo XP/badges/missions until the student actually does
+ * something (or a teacher assigns/approves a quest).
+ */
+export function isRealStudentAccount(): boolean {
+  if (!isSupabaseConfigured) return false;
+  const user = getSnapshot().user;
+  return user?.role === 'student';
+}
+
 export interface DashboardFilterParams {
   classId?: string;
   from?: string;
