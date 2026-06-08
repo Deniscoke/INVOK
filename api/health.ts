@@ -11,10 +11,6 @@
  *                  values never leave the server).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// EXPERIMENTAL: static import of one local module to confirm whether
-// @vercel/node bundles it correctly. If this endpoint returns 200 with
-// `staticLocalImport_env` ok, we know static imports are the right fix.
-import { getServerEnv as staticGetServerEnv } from '../backend/lib/env';
 
 interface CheckResult {
   ok: boolean;
@@ -118,16 +114,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // This one can legitimately fail when env vars are missing — that's
   // information, not a deployment bug.
   checks.supabaseAdmin_construct = asResult(adminCheck);
-
-  // EXPERIMENT: same env module, but reached via STATIC import at the top
-  // of this file. If this works while the dynamic version above fails, the
-  // fix for FUNCTION_INVOCATION_FAILED across all endpoints is to migrate
-  // dynamic local imports to static.
-  const staticEnvCheck = await timed(async () => {
-    const env = staticGetServerEnv();
-    return { appEnv: env.appEnv };
-  });
-  checks.staticLocalImport_env = asResult(staticEnvCheck);
 
   res.status(200).json({
     ...base,
