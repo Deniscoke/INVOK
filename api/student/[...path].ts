@@ -6,7 +6,7 @@
  *   POST /api/student/session  → verifyStudentSession
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { joinClass, verifyStudentSession } from '../../backend/services/studentAccessService';
+import { joinClass, verifyStudentSession } from '../../backend/services/studentAccessService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {

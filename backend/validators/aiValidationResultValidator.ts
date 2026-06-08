@@ -5,7 +5,7 @@
  * out-of-range numbers, or missing fields. This validator NEVER throws —
  * on any problem it returns a safe fallback that flags teacher review.
  */
-import type { AIValidationResult, AIReason, DetectedCompetency } from '../services/aiValidationService';
+import type { AIValidationResult, AIReason, DetectedCompetency } from '../services/aiValidationService.js';
 
 export type ParseResult =
   | { ok: true; value: Omit<AIValidationResult, 'source'> }

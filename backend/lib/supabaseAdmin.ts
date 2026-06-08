@@ -8,7 +8,7 @@
  * The browser must use the anon key + RLS via a separate (future) client.
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { getServerEnv, missingServerSecrets } from './env';
+import { getServerEnv, missingServerSecrets } from './env.js';
 
 let cached: SupabaseClient | null = null;
 

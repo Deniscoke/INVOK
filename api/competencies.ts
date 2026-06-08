@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getCompetencies } from '../backend/services/missionService';
+import { getCompetencies } from '../backend/services/missionService.js';
 
 /** GET /api/competencies – returns the competency catalog (child + teacher view). */
 export default function handler(req: VercelRequest, res: VercelResponse): void {

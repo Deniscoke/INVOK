@@ -7,7 +7,7 @@
  * The key is never logged, never exported, and never returned to clients.
  */
 import OpenAI from 'openai';
-import { getServerEnv } from './env';
+import { getServerEnv } from './env.js';
 
 let cached: OpenAI | null = null;
 

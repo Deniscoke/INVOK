@@ -14,9 +14,9 @@
  * Do NOT import from frontend code.
  */
 import type { VercelRequest } from '@vercel/node';
-import { bearer, getUserFromToken, getProfile } from './authContext';
-import { verifyStudentSession } from '../services/studentAccessService';
-import { getServerEnv, missingServerSecrets } from './env';
+import { bearer, getUserFromToken, getProfile } from './authContext.js';
+import { verifyStudentSession } from '../services/studentAccessService.js';
+import { getServerEnv, missingServerSecrets } from './env.js';
 
 export type RequestContext =
   | { mode: 'supabase_user'; userId: string; role: 'admin' | 'teacher' | 'student' }

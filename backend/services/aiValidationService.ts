@@ -10,16 +10,16 @@
  * configured via env. Either way it returns the same `AIValidationResult`
  * shape, so callers and tests do not change.
  */
-import type { SubmissionInput } from '../validators/submissionValidator';
-import { getServerEnv, shouldUseOpenAI } from '../lib/env';
-import { getMissionById, getCompetencies } from './missionService';
+import type { SubmissionInput } from '../validators/submissionValidator.js';
+import { getServerEnv, shouldUseOpenAI } from '../lib/env.js';
+import { getMissionById, getCompetencies } from './missionService.js';
 import {
   AI_VALIDATION_SYSTEM_PROMPT,
   AI_VALIDATION_JSON_SCHEMA,
   buildValidationPrompt,
   type ValidationPromptInput,
-} from '../prompts/aiValidationPrompt';
-import { parseAIValidationResult } from '../validators/aiValidationResultValidator';
+} from '../prompts/aiValidationPrompt.js';
+import { parseAIValidationResult } from '../validators/aiValidationResultValidator.js';
 
 export type AISource = 'mock' | 'openai' | 'mock_fallback';
 
@@ -170,7 +170,7 @@ export async function openAIValidateSubmission(
 ): Promise<AIValidationResult> {
   const env = getServerEnv();
   try {
-    const { getOpenAIClient } = await import('../lib/openaiClient');
+    const { getOpenAIClient } = await import('../lib/openaiClient.js');
     const client = getOpenAIClient();
     if (!client) {
       return { ...mockEvaluate(input, context), source: 'mock_fallback' };

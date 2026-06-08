@@ -9,16 +9,16 @@
  * Do NOT import from frontend code.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { RequestContext } from '../lib/requestContext';
-import { isTeacherOrAdmin } from '../lib/requestContext';
-import { getServerEnv, missingServerSecrets } from '../lib/env';
+import type { RequestContext } from '../lib/requestContext.js';
+import { isTeacherOrAdmin } from '../lib/requestContext.js';
+import { getServerEnv, missingServerSecrets } from '../lib/env.js';
 import {
   validateTeacherReviewInput,
   type TeacherReviewInput,
   type ReviewDecision,
-} from '../validators/teacherReviewValidator';
-import { getMissionById } from './missionService';
-import { applyXp, finalXpForReview, levelForXp } from './progressService';
+} from '../validators/teacherReviewValidator.js';
+import { getMissionById } from './missionService.js';
+import { applyXp, finalXpForReview, levelForXp } from './progressService.js';
 
 export interface TeacherReviewRecord {
   id: string;
@@ -115,7 +115,7 @@ function mockCreateReview(ctx: RequestContext, input: TeacherReviewInput): Creat
 async function dbCreateReview(ctx: RequestContext, input: TeacherReviewInput): Promise<CreateReviewResult> {
   if (ctx.mode !== 'supabase_user') return { ok: false, error: 'Neoprávnený kontext.' };
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
 
     // Load submission and enforce class scope.
@@ -275,7 +275,7 @@ async function canAccessSubmission(admin: SupabaseClient, ctx: RequestContext, s
 
 async function dbGetReview(ctx: RequestContext, submissionId: string): Promise<TeacherReviewRecord | null> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
 
     // Scope check: only the class manager or the submission owner may read.
@@ -306,7 +306,7 @@ async function dbListReviews(
   filters: { decision?: ReviewDecision; classId?: string },
 ): Promise<TeacherReviewRecord[]> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
     let query = admin
       .from('teacher_reviews')
@@ -372,7 +372,7 @@ function mockStats(): TeacherDashboardStats {
 
 async function dbStats(userId: string): Promise<TeacherDashboardStats> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
     const { data: memberships } = await admin
       .from('class_memberships')

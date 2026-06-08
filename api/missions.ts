@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getMissions } from '../backend/services/missionService';
-import { getServerEnv, missingServerSecrets } from '../backend/lib/env';
+import { getMissions } from '../backend/services/missionService.js';
+import { getServerEnv, missingServerSecrets } from '../backend/lib/env.js';
 
 /**
  * GET /api/missions

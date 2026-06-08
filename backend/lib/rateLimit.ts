@@ -9,9 +9,9 @@
  *
  * Do NOT import from frontend code.
  */
-import type { RequestContext } from './requestContext';
-import { getServerEnv } from './env';
-import { sha256Hex } from './hash';
+import type { RequestContext } from './requestContext.js';
+import { getServerEnv } from './env.js';
+import { sha256Hex } from './hash.js';
 
 export type RateLimitResult =
   | { allowed: true; remaining: number; resetAt: number }

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
-import { getStudentProgress } from '../../backend/services/submissionService';
+import { resolveContext, requireAuth } from '../../backend/lib/requestContext.js';
+import { getStudentProgress } from '../../backend/services/submissionService.js';
 
 /**
  * GET /api/progress/me

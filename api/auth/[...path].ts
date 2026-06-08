@@ -6,7 +6,7 @@
  *   GET /api/auth/profile  → caller's profile + role (no email exposed)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { bearer, getUserFromToken, getProfile } from '../../backend/lib/authContext';
+import { bearer, getUserFromToken, getProfile } from '../../backend/lib/authContext.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {

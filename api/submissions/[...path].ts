@@ -7,15 +7,15 @@
  *   GET  /api/submissions/[id]     → getSubmissionById + teacher review (if any)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
-import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit';
-import { validateSubmissionInput } from '../../backend/validators/submissionValidator';
+import { resolveContext, requireAuth } from '../../backend/lib/requestContext.js';
+import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit.js';
+import { validateSubmissionInput } from '../../backend/validators/submissionValidator.js';
 import {
   createSubmission,
   getOwnSubmissions,
   getSubmissionById,
-} from '../../backend/services/submissionService';
-import { getTeacherReviewForSubmission } from '../../backend/services/teacherReviewService';
+} from '../../backend/services/submissionService.js';
+import { getTeacherReviewForSubmission } from '../../backend/services/teacherReviewService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const segments = (req.query.path as string[] | undefined) ?? [];

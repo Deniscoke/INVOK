@@ -14,13 +14,13 @@
  *
  * Do NOT import from frontend code.
  */
-import type { RequestContext } from '../lib/requestContext';
-import type { SubmissionInput, SubmissionQueryFilter, SubmissionKind } from '../validators/submissionValidator';
-import { validateSubmissionWithAI, type AIValidationResult } from './aiValidationService';
-import { scoreProblemProposal } from './problemProposalService';
-import { getMissionById } from './missionService';
-import { levelForXp } from './progressService';
-import { getServerEnv, missingServerSecrets } from '../lib/env';
+import type { RequestContext } from '../lib/requestContext.js';
+import type { SubmissionInput, SubmissionQueryFilter, SubmissionKind } from '../validators/submissionValidator.js';
+import { validateSubmissionWithAI, type AIValidationResult } from './aiValidationService.js';
+import { scoreProblemProposal } from './problemProposalService.js';
+import { getMissionById } from './missionService.js';
+import { levelForXp } from './progressService.js';
+import { getServerEnv, missingServerSecrets } from '../lib/env.js';
 
 export interface SubmissionRow {
   id: string;
@@ -223,7 +223,7 @@ function mockTeacherSubmissions(): SubmissionWithEvaluation[] {
 
 async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<CreateResult> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
 
     // Determine identity fields
@@ -301,7 +301,7 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
 
 async function dbGetOwn(ctx: RequestContext): Promise<SubmissionWithEvaluation[]> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
 
     let query = admin
@@ -326,7 +326,7 @@ async function dbGetOwn(ctx: RequestContext): Promise<SubmissionWithEvaluation[]
 
 async function dbGetById(ctx: RequestContext, id: string): Promise<SubmissionWithEvaluation | null> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
 
     const { data, error } = await admin
@@ -356,7 +356,7 @@ async function dbGetTeacherList(
   filters: SubmissionQueryFilter,
 ): Promise<SubmissionWithEvaluation[]> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
 
     // Find classes the teacher manages
@@ -399,7 +399,7 @@ async function dbGetProgress(ctx: RequestContext): Promise<{
   competencyProgress: { competencyId: string; xp: number; level: number; mastery: number }[];
 }> {
   try {
-    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin');
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
 
     if (ctx.mode !== 'supabase_user') {

@@ -11,11 +11,11 @@
  *
  * Do NOT import from frontend code.
  */
-import type { SubmissionInput } from '../validators/submissionValidator';
-import type { AIValidationResult } from './aiValidationService';
-import { validateSubmissionWithAI } from './aiValidationService';
-import { getMissionById } from './missionService';
-import { problemProposalXp } from './progressService';
+import type { SubmissionInput } from '../validators/submissionValidator.js';
+import type { AIValidationResult } from './aiValidationService.js';
+import { validateSubmissionWithAI } from './aiValidationService.js';
+import { getMissionById } from './missionService.js';
+import { problemProposalXp } from './progressService.js';
 
 /** Competencies typically developed by naming/mapping a problem. */
 export const PROBLEM_COMPETENCIES = ['fact_detective', 'maker_venture', 'community_hero'];

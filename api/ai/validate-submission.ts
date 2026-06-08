@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { validateSubmissionInput } from '../../backend/validators/submissionValidator';
-import { validateSubmissionWithAI } from '../../backend/services/aiValidationService';
-import { getMissionById } from '../../backend/services/missionService';
-import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
-import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit';
-import { getServerEnv, missingServerSecrets } from '../../backend/lib/env';
+import { validateSubmissionInput } from '../../backend/validators/submissionValidator.js';
+import { validateSubmissionWithAI } from '../../backend/services/aiValidationService.js';
+import { getMissionById } from '../../backend/services/missionService.js';
+import { resolveContext, requireAuth } from '../../backend/lib/requestContext.js';
+import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit.js';
+import { getServerEnv, missingServerSecrets } from '../../backend/lib/env.js';
 
 /**
  * POST /api/ai/validate-submission
@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
     try {
-      const { getSupabaseAdmin } = await import('../../backend/lib/supabaseAdmin');
+      const { getSupabaseAdmin } = await import('../../backend/lib/supabaseAdmin.js');
       const admin = getSupabaseAdmin();
       const { data: sub } = await admin
         .from('submissions')

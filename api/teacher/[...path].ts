@@ -8,15 +8,15 @@
  *   GET  /api/teacher/submissions                 → getTeacherSubmissions
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveContext, isTeacherOrAdmin, requireAuth } from '../../backend/lib/requestContext';
+import { resolveContext, isTeacherOrAdmin, requireAuth } from '../../backend/lib/requestContext.js';
 import {
   createTeacherReview,
   listTeacherReviews,
   getTeacherReviewForSubmission,
-} from '../../backend/services/teacherReviewService';
-import { REVIEW_DECISIONS, type ReviewDecision } from '../../backend/validators/teacherReviewValidator';
-import { getTeacherSubmissions } from '../../backend/services/submissionService';
-import { validateQueryFilter } from '../../backend/validators/submissionValidator';
+} from '../../backend/services/teacherReviewService.js';
+import { REVIEW_DECISIONS, type ReviewDecision } from '../../backend/validators/teacherReviewValidator.js';
+import { getTeacherSubmissions } from '../../backend/services/submissionService.js';
+import { validateQueryFilter } from '../../backend/validators/submissionValidator.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const segments = (req.query.path as string[] | undefined) ?? [];

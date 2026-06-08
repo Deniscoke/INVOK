@@ -11,11 +11,6 @@
  *                  values never leave the server).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// Probe v2: explicit .js extension. ESM Node 22 strictly requires file
-// extensions on relative specifiers; the previous extensionless probe
-// crashed for that reason (suspected). If THIS works, the fix for the
-// whole backend is just adding .js suffixes — no folder moves needed.
-import { envProbeOk } from './_lib/_env_probe.js';
 
 interface CheckResult {
   ok: boolean;
@@ -90,7 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const checks: Record<string, CheckResult> = {};
 
   const envCheck = await timed(async () => {
-    const mod = await import('../backend/lib/env');
+    const mod = await import('../backend/lib/env.js');
     const env = mod.getServerEnv();
     return {
       appEnv: env.appEnv,
@@ -113,32 +108,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   checks.npmImport_openai = asResult(openaiImport);
 
   const adminCheck = await timed(async () => {
-    const mod = await import('../backend/lib/supabaseAdmin');
+    const mod = await import('../backend/lib/supabaseAdmin.js');
     return Boolean(mod.getSupabaseAdmin());
   });
   // This one can legitimately fail when env vars are missing — that's
   // information, not a deployment bug.
   checks.supabaseAdmin_construct = asResult(adminCheck);
-
-  const probeCheck = await timed(() => envProbeOk());
-  checks.apiLibProbe_jsExt = asResult(probeCheck);
-
-  // Same target via dynamic import with .js extension, to see if the .js
-  // suffix unblocks dynamic imports too.
-  const dynProbeCheck = await timed(async () => {
-    const mod = await import('./_lib/_env_probe.js');
-    return mod.envProbeOk();
-  });
-  checks.apiLibProbe_jsExt_dyn = asResult(dynProbeCheck);
-
-  // Dynamic .js extension on the real backend module — sanity check the
-  // same fix without a folder move.
-  const envJsExt = await timed(async () => {
-    const mod = await import('../backend/lib/env.js');
-    const env = mod.getServerEnv();
-    return { appEnv: env.appEnv };
-  });
-  checks.backendEnv_jsExt_dyn = asResult(envJsExt);
 
   res.status(200).json({
     ...base,

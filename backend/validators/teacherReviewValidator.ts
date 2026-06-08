@@ -4,7 +4,7 @@
  * Enforces decision-specific requirements (e.g. an adjustment needs a reason),
  * clamps the final score, and rejects HTML/script payloads in free-text fields.
  */
-import { containsDangerousHtml } from './submissionValidator';
+import { containsDangerousHtml } from './submissionValidator.js';
 
 export const REVIEW_DECISIONS = ['approved', 'adjusted', 'needs_revision', 'rejected'] as const;
 export type ReviewDecision = (typeof REVIEW_DECISIONS)[number];

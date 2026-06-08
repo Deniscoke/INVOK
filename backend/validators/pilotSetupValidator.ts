@@ -2,7 +2,7 @@
  * Validation for pilot setup (schools, classes, teachers, student codes).
  * Rejects HTML/script payloads; caps sizes; never builds SQL strings.
  */
-import { containsDangerousHtml } from './submissionValidator';
+import { containsDangerousHtml } from './submissionValidator.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLUG_RE = /^[a-z0-9-]{1,80}$/;

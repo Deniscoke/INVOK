@@ -11,16 +11,16 @@
  *   GET /api/dashboard/export.csv        → getDashboardCsvExport
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveContext, isTeacherOrAdmin } from '../../backend/lib/requestContext';
-import { validateDashboardFilters } from '../../backend/validators/dashboardValidator';
+import { resolveContext, isTeacherOrAdmin } from '../../backend/lib/requestContext.js';
+import { validateDashboardFilters } from '../../backend/validators/dashboardValidator.js';
 import {
   getTeacherDashboardSummary,
   getCompetencyProgressSummary,
   getProblemProposalSummary,
   getTeacherReviewStats,
   getDashboardCsvExport,
-} from '../../backend/services/dashboardService';
-import { listClassesForTeacher } from '../../backend/services/pilotSetupService';
+} from '../../backend/services/dashboardService.js';
+import { listClassesForTeacher } from '../../backend/services/pilotSetupService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {

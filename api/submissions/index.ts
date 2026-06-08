@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveContext, requireAuth } from '../../backend/lib/requestContext';
-import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit';
-import { validateSubmissionInput } from '../../backend/validators/submissionValidator';
-import { createSubmission } from '../../backend/services/submissionService';
+import { resolveContext, requireAuth } from '../../backend/lib/requestContext.js';
+import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit.js';
+import { validateSubmissionInput } from '../../backend/validators/submissionValidator.js';
+import { createSubmission } from '../../backend/services/submissionService.js';
 
 /**
  * POST /api/submissions

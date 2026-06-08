@@ -13,7 +13,7 @@
  *   PATCH  /api/admin/student-codes/[id]       → deactivateStudentAccessCode
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveContext, isTeacherOrAdmin } from '../../backend/lib/requestContext';
+import { resolveContext, isTeacherOrAdmin } from '../../backend/lib/requestContext.js';
 import {
   createSchool,
   createClass,
@@ -21,7 +21,7 @@ import {
   generateStudentAccessCodes,
   listStudentAccessCodes,
   deactivateStudentAccessCode,
-} from '../../backend/services/pilotSetupService';
+} from '../../backend/services/pilotSetupService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const ctx = await resolveContext(req);
