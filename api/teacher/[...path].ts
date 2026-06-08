@@ -1,11 +1,13 @@
 /**
- * Catch-all router for /api/teacher/* — consolidates 3 teacher endpoints.
+ * Catch-all router for /api/teacher/*
  *
  * Dispatch table:
  *   POST /api/teacher/reviews                     → createTeacherReview
  *   GET  /api/teacher/reviews?decision=…          → listTeacherReviews
  *   GET  /api/teacher/reviews/[submissionId]      → getTeacherReviewForSubmission
  *   GET  /api/teacher/submissions                 → getTeacherSubmissions
+ *   GET  /api/teacher/quests?classId=…            → listClassPendingQuests
+ *   POST /api/teacher/quests/review               → reviewQuest (approve/reject/changes)
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveContext, isTeacherOrAdmin, requireAuth } from '../../backend/lib/requestContext.js';
@@ -17,6 +19,7 @@ import {
 import { REVIEW_DECISIONS, type ReviewDecision } from '../../backend/validators/teacherReviewValidator.js';
 import { getTeacherSubmissions } from '../../backend/services/submissionService.js';
 import { validateQueryFilter } from '../../backend/validators/submissionValidator.js';
+import { listClassPendingQuests, reviewQuest } from '../../backend/services/studentQuestService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const segments = (req.query.path as string[] | undefined) ?? [];
@@ -94,6 +97,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(200).json({ reviews });
       return;
     }
+    res.setHeader('Allow', 'GET, POST');
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
+  }
+
+  // /api/teacher/quests* — student-proposed quests awaiting teacher approval.
+  if (root === 'quests') {
+    const sub = segments[1] ?? '';
+    const ctx = await resolveContext(req);
+    if (!isTeacherOrAdmin(ctx)) {
+      res.status(403).json({ error: 'Prístup len pre učiteľov a adminov.' });
+      return;
+    }
+
+    if (sub === 'review' && req.method === 'POST') {
+      const result = await reviewQuest(ctx, (req.body ?? {}) as Parameters<typeof reviewQuest>[1]);
+      if (!result.ok) {
+        res.status(result.status ?? 500).json({ ok: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ ok: true, quest: result.data, source: result.source });
+      return;
+    }
+
+    if (!sub && req.method === 'GET') {
+      const classId = typeof req.query.classId === 'string' ? req.query.classId : undefined;
+      const result = await listClassPendingQuests(ctx, classId);
+      if (!result.ok) {
+        res.status(result.status ?? 500).json({ ok: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ ok: true, quests: result.data, source: result.source });
+      return;
+    }
+
     res.setHeader('Allow', 'GET, POST');
     res.status(405).json({ error: 'Method Not Allowed' });
     return;

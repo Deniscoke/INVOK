@@ -10,6 +10,10 @@ import { ReviewStatsPanel } from '../components/dashboard/ReviewStatsPanel';
 import { DashboardFilters, mountDashboardFilters } from '../components/dashboard/DashboardFilters';
 import { CsvExportButton, mountCsvExportButton } from '../components/dashboard/CsvExportButton';
 import {
+  PendingQuestApprovalsPanel,
+  mountPendingQuestApprovalsPanel,
+} from '../components/dashboard/PendingQuestApprovalsPanel';
+import {
   fetchDashboard,
   fetchClasses,
   isRealTeacherAccount,
@@ -121,7 +125,8 @@ export function TeacherDashboardPage(): string {
   </section>
 
   <div style="margin-top:var(--space-6)">${realAccountWelcome()}</div>
-  ${myClassesCard(cachedClasses)}`;
+  ${myClassesCard(cachedClasses)}
+  ${PendingQuestApprovalsPanel()}`;
   }
 
   const overview = getClassOverview();
@@ -226,6 +231,10 @@ export function TeacherDashboardPage(): string {
 /** Wire the "Posúdiť" buttons to open/close an inline review panel. */
 export function mountTeacherDashboard(): void {
   void loadSchoolDashboard();
+  // The pending-quests panel is only rendered for real (Supabase) teacher
+  // accounts. The mount call is safe in either branch — it short-circuits
+  // when the container doesn't exist.
+  mountPendingQuestApprovalsPanel();
   const reviews = getPendingReviews();
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-review-open]'))) {
     button.addEventListener('click', () => {

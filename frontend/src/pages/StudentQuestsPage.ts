@@ -2,26 +2,31 @@
  * Student Quests page — "Moje misie".
  *
  * Two creation paths:
- *   1. Navrhnúť problém (manual)  – student fills the structured form below.
- *   2. AI návrh                   – calls the (server) generator; falls back
- *                                   to a guided template until the OpenAI
- *                                   integration is enabled in production.
+ *   1. Navrhnúť problém (manual)  – student fills the structured form.
+ *   2. AI návrh                   – calls /api/student/quests/generate
+ *                                   (OpenAI-backed when configured), then
+ *                                   stages the draft so the student can
+ *                                   review + tweak before sending to the
+ *                                   teacher.
  *
- * Limits & lifecycle: see services/questStore.ts. Each quest moves through
- *   pending_approval → approved → submitted → completed (or rejected /
- *   changes_requested back to draft).
+ * Limits & lifecycle live in services/questStore.ts. Each quest moves
+ * through pending_approval → approved → submitted → completed (or
+ * rejected / changes_requested back to draft).
  */
 
 import { getSnapshot } from '../services/authService';
 import {
   QUEST_LIMITS,
+  countActive,
   createQuest,
   deleteQuest,
-  getActiveQuestCount,
+  generateQuestDraft,
   listQuests,
   type QuestState,
   type StudentQuest,
 } from '../services/questStore';
+
+let pendingMount: (() => void) | null = null;
 
 function escapeHtml(value: string): string {
   return value
@@ -40,36 +45,12 @@ interface StateBadge {
 
 const STATE_BADGES: Record<QuestState, StateBadge> = {
   draft: { label: 'Koncept', chipClass: 'chip--muted', hint: 'Ešte neodoslané učiteľovi.' },
-  pending_approval: {
-    label: 'Čaká na učiteľa',
-    chipClass: 'chip--warm',
-    hint: 'Učiteľ ešte misiu nepotvrdil. Po schválení môžeš odovzdať.',
-  },
-  changes_requested: {
-    label: 'Učiteľ pýta úpravu',
-    chipClass: 'chip--warm',
-    hint: 'Pozri spätnú väzbu a uprav návrh.',
-  },
-  approved: {
-    label: 'Schválená',
-    chipClass: 'chip--accent',
-    hint: 'Učiteľ schválil. Môžeš začať pracovať a odovzdať.',
-  },
-  submitted: {
-    label: 'Odovzdaná',
-    chipClass: 'chip--accent',
-    hint: 'Riešenie čaká na AI a učiteľské hodnotenie.',
-  },
-  completed: {
-    label: 'Hotovo',
-    chipClass: 'chip--muted',
-    hint: 'Misia dokončená a ocenená.',
-  },
-  rejected: {
-    label: 'Zamietnutá',
-    chipClass: 'chip--muted',
-    hint: 'Misiu učiteľ nepotvrdil.',
-  },
+  pending_approval: { label: 'Čaká na učiteľa', chipClass: 'chip--warm', hint: 'Učiteľ misiu ešte nepotvrdil.' },
+  changes_requested: { label: 'Učiteľ pýta úpravu', chipClass: 'chip--warm', hint: 'Pozri spätnú väzbu a uprav návrh.' },
+  approved: { label: 'Schválená', chipClass: 'chip--accent', hint: 'Učiteľ schválil. Môžeš odovzdať riešenie.' },
+  submitted: { label: 'Odovzdaná', chipClass: 'chip--accent', hint: 'Riešenie čaká na AI a učiteľské hodnotenie.' },
+  completed: { label: 'Hotovo', chipClass: 'chip--muted', hint: 'Misia dokončená a ocenená.' },
+  rejected: { label: 'Zamietnutá', chipClass: 'chip--muted', hint: 'Misiu učiteľ nepotvrdil.' },
 };
 
 function formatDate(iso?: string): string {
@@ -82,10 +63,10 @@ function formatDate(iso?: string): string {
 }
 
 function questCard(q: StudentQuest): string {
-  const badge = STATE_BADGES[q.state];
-  const canDelete = q.state !== 'approved' && q.state !== 'submitted';
+  const badge = STATE_BADGES[q.state] ?? STATE_BADGES.draft;
+  const canDelete = q.state !== 'approved' && q.state !== 'submitted' && q.state !== 'completed';
   return `
-  <article class="card" data-quest-id="${q.id}" style="border-left:4px solid var(--color-accent, #6366f1)">
+  <article class="card" data-quest-id="${escapeHtml(q.id)}" style="border-left:4px solid var(--color-accent, #6366f1)">
     <div class="card-title">
       <div>
         <div class="muted" style="font-size:var(--fs-xs)">
@@ -93,7 +74,7 @@ function questCard(q: StudentQuest): string {
         </div>
         <h3 style="margin:4px 0 0">${escapeHtml(q.title)}</h3>
       </div>
-      <span class="chip ${badge.chipClass}" title="${badge.hint}">${badge.label}</span>
+      <span class="chip ${badge.chipClass}" title="${escapeHtml(badge.hint)}">${badge.label}</span>
     </div>
     ${q.goal ? `<div class="mission__goal" style="margin-top:var(--space-3)"><strong>Cieľ:</strong> ${escapeHtml(q.goal)}</div>` : ''}
     ${q.affectedGroup ? `<p class="muted" style="margin:8px 0 0;font-size:var(--fs-sm)"><strong>Koho sa týka:</strong> ${escapeHtml(q.affectedGroup)}</p>` : ''}
@@ -105,9 +86,13 @@ function questCard(q: StudentQuest): string {
         ${q.approvedDeadline ? ` · <strong>schválený:</strong> ${formatDate(q.approvedDeadline)}` : ''}
       </span>
       ${q.teacherFeedback ? `<span class="chip chip--warm" title="${escapeHtml(q.teacherFeedback)}">spätná väzba učiteľa</span>` : ''}
+      ${q.aiModel ? `<span class="muted" style="font-size:var(--fs-xs)">model: ${escapeHtml(q.aiModel)}</span>` : ''}
     </div>
+    ${q.teacherFeedback ? `<div class="teacher-hint" style="margin-top:var(--space-3)">
+      <div class="teacher-hint__label">Spätná väzba učiteľa</div>${escapeHtml(q.teacherFeedback)}
+    </div>` : ''}
     ${canDelete
-      ? `<div style="margin-top:var(--space-3)"><button type="button" class="btn btn--ghost btn--sm" data-action="delete-quest" data-quest-id="${q.id}">Zmazať</button></div>`
+      ? `<div style="margin-top:var(--space-3)"><button type="button" class="btn btn--ghost btn--sm" data-action="delete-quest" data-quest-id="${escapeHtml(q.id)}">Zmazať</button></div>`
       : ''}
   </article>`;
 }
@@ -122,7 +107,9 @@ function emptyStateCard(): string {
   </section>`;
 }
 
-function creationPanels(): string {
+function creationPanels(disabled: boolean): string {
+  const dis = disabled ? 'disabled' : '';
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   return `
   <div class="grid grid--2" style="gap:var(--space-4)">
     <section class="card" style="border-left:4px solid var(--color-success)">
@@ -130,57 +117,89 @@ function creationPanels(): string {
       <p class="muted" style="font-size:var(--fs-sm)">Všimni si problém vo svojej škole / komunite a pomenuj ho.</p>
       <form id="quest-propose-form" class="stack" novalidate>
         <label class="field">Názov misie
-          <input id="q-title" type="text" maxlength="120" required placeholder="napr. Dlhé rady v jedálni">
+          <input id="q-title" type="text" maxlength="120" required placeholder="napr. Dlhé rady v jedálni" ${dis}>
         </label>
         <label class="field">Cieľ – čo chceš dosiahnuť
-          <textarea id="q-goal" rows="2" maxlength="500" required placeholder="napr. Skrátiť čakanie o polovicu pomocou nového rozvrhu"></textarea>
+          <textarea id="q-goal" rows="2" maxlength="500" required placeholder="napr. Skrátiť čakanie o polovicu pomocou nového rozvrhu" ${dis}></textarea>
         </label>
         <div class="grid grid--2" style="gap:var(--space-3)">
           <label class="field">Koho sa týka
-            <input id="q-affected" type="text" maxlength="120" required placeholder="napr. žiaci 2. stupňa">
+            <input id="q-affected" type="text" maxlength="120" required placeholder="napr. žiaci 2. stupňa" ${dis}>
           </label>
           <label class="field">Termín (môj návrh)
-            <input id="q-deadline" type="date">
+            <input id="q-deadline" type="date" min="${tomorrow}" ${dis}>
           </label>
         </div>
         <label class="field">Dôkaz / čo si si všimol
-          <textarea id="q-evidence" rows="2" maxlength="800" required placeholder="napr. 3 dni som meral čas v rade…"></textarea>
+          <textarea id="q-evidence" rows="2" maxlength="800" required placeholder="napr. 3 dni som meral čas v rade…" ${dis}></textarea>
         </label>
         <label class="field">Prvý nápad na riešenie
-          <textarea id="q-firstidea" rows="2" maxlength="800" required placeholder="napr. dva výdajné pulty cez 12:00…"></textarea>
+          <textarea id="q-firstidea" rows="2" maxlength="800" required placeholder="napr. dva výdajné pulty cez 12:00…" ${dis}></textarea>
         </label>
         <p id="quest-propose-msg" class="muted" role="status" aria-live="polite"></p>
-        <button class="btn btn--primary" type="submit" id="quest-propose-btn">Poslať návrh učiteľovi</button>
+        <button class="btn btn--primary" type="submit" id="quest-propose-btn" ${dis}>Poslať návrh učiteľovi</button>
       </form>
     </section>
 
     <section class="card" style="border-left:4px solid var(--color-accent)">
       <h3 style="margin-top:0">🤖 AI návrh misie</h3>
-      <p class="muted" style="font-size:var(--fs-sm)">Napíš oblasť záujmu (napr. „triedenie odpadu“) a AI ti pripraví návrh v súlade s INVOK cieľmi a ŠVP ZV.</p>
+      <p class="muted" style="font-size:var(--fs-sm)">Napíš oblasť záujmu a AI ti pripraví celý návrh — cieľ, dôkaz aj prvý krok — v súlade s INVOK + ŠVP ZV.</p>
       <form id="quest-ai-form" class="stack" novalidate>
         <label class="field">Oblasť záujmu
-          <input id="q-ai-topic" type="text" maxlength="160" placeholder="napr. triedenie odpadu v triede" required>
+          <input id="q-ai-topic" type="text" maxlength="200" placeholder="napr. triedenie odpadu v triede" required ${dis}>
         </label>
-        <label class="field">Termín (môj návrh)
-          <input id="q-ai-deadline" type="date">
-        </label>
+        <div class="grid grid--2" style="gap:var(--space-3)">
+          <label class="field">Ročník (voliteľné)
+            <input id="q-ai-grade" type="number" min="1" max="9" placeholder="napr. 7" ${dis}>
+          </label>
+          <label class="field">Termín (môj návrh)
+            <input id="q-ai-deadline" type="date" min="${tomorrow}" ${dis}>
+          </label>
+        </div>
         <p id="quest-ai-msg" class="muted" role="status" aria-live="polite"></p>
-        <button class="btn btn--primary" type="submit" id="quest-ai-btn">Vygenerovať návrh</button>
-        <p class="muted" style="font-size:var(--fs-xs);margin:0">
-          Pozn.: AI generátor cez OpenAI sa zapne v ďalšej iterácii. Zatiaľ ti pripravíme
-          kostru misie, ktorú si môžeš upraviť a poslať učiteľovi.
-        </p>
+        <button class="btn btn--primary" type="submit" id="quest-ai-btn" ${dis}>Vygenerovať a poslať</button>
       </form>
+      <div id="quest-ai-preview" style="margin-top:var(--space-3)"></div>
     </section>
   </div>`;
+}
+
+interface PageState {
+  loaded: boolean;
+  loading: boolean;
+  quests: StudentQuest[];
+  error?: string;
+}
+
+let state: PageState = { loaded: false, loading: false, quests: [] };
+
+function renderListSection(): string {
+  if (state.loading) {
+    return `<p class="muted">Načítavam misie…</p>`;
+  }
+  if (state.error) {
+    return `<p class="muted" style="color:var(--color-danger)">${escapeHtml(state.error)}</p>`;
+  }
+  if (state.quests.length === 0) {
+    return emptyStateCard();
+  }
+  return `<div class="stack" style="gap:var(--space-4)">${state.quests.map(questCard).join('')}</div>`;
 }
 
 export function StudentQuestsPage(): string {
   const user = getSnapshot().user;
   const alias = user?.displayName ?? 'žiak';
-  const quests = listQuests();
-  const activeCount = quests.filter((q) => q.state !== 'completed' && q.state !== 'rejected').length;
-  const overLimit = activeCount >= QUEST_LIMITS.MAX_ACTIVE;
+  const active = countActive(state.quests);
+  const overLimit = active >= QUEST_LIMITS.MAX_ACTIVE;
+
+  pendingMount = () => {
+    if (!state.loaded && !state.loading) {
+      void refreshQuests();
+    }
+    bindDelete();
+    bindProposeForm();
+    bindAiForm();
+  };
 
   return `
   <section class="card">
@@ -191,7 +210,7 @@ export function StudentQuestsPage(): string {
       </div>
       <div>
         <span class="chip ${overLimit ? 'chip--warm' : 'chip--muted'}">
-          ${activeCount} / ${QUEST_LIMITS.MAX_ACTIVE} aktívnych
+          ${active} / ${QUEST_LIMITS.MAX_ACTIVE} aktívnych
         </span>
       </div>
     </div>
@@ -209,14 +228,12 @@ export function StudentQuestsPage(): string {
 
   <section style="margin-top:var(--space-5)">
     <div class="section-title"><h2 style="margin:0">Aktuálne misie</h2></div>
-    ${quests.length === 0 ? emptyStateCard() : `<div class="stack" style="gap:var(--space-4)">${quests.map(questCard).join('')}</div>`}
+    <div id="quest-list">${renderListSection()}</div>
   </section>
 
   <section style="margin-top:var(--space-6)">
     <div class="section-title"><h2 style="margin:0">Pridaj novú misiu</h2></div>
-    ${overLimit
-      ? '<p class="muted">Pridávanie misií je deaktivované — najprv zruš alebo dokonči existujúcu.</p>'
-      : creationPanels()}
+    ${creationPanels(overLimit)}
   </section>`;
 }
 
@@ -225,23 +242,57 @@ function readVal(selector: string): string {
   return el?.value.trim() ?? '';
 }
 
-function refresh(): void {
-  window.dispatchEvent(new HashChangeEvent('hashchange'));
+function reRenderPage(): void {
+  const app = document.querySelector<HTMLElement>('#app .container');
+  if (!app) {
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    return;
+  }
+  app.innerHTML = StudentQuestsPage();
+  pendingMount?.();
+}
+
+function updateListDom(): void {
+  const slot = document.querySelector<HTMLElement>('#quest-list');
+  if (slot) slot.innerHTML = renderListSection();
+  // Update active-count chip without full re-render so forms keep their state.
+  // (Cheap re-render of the whole page is simpler and we already do it after
+  // mutations, so this is a no-op fallback.)
+}
+
+async function refreshQuests(): Promise<void> {
+  state.loading = true;
+  state.error = undefined;
+  updateListDom();
+  try {
+    const list = await listQuests();
+    state.quests = list;
+    state.loaded = true;
+    state.loading = false;
+    // Full re-render so the "active count" chip + limit banner reflect reality.
+    reRenderPage();
+  } catch (err) {
+    state.loading = false;
+    state.error = err instanceof Error ? err.message : 'Nepodarilo sa načítať misie.';
+    updateListDom();
+  }
 }
 
 function bindDelete(): void {
   for (const btn of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-action="delete-quest"]'))) {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-quest-id');
       if (!id) return;
       const confirmed = window.confirm('Naozaj zmazať túto misiu?');
       if (!confirmed) return;
-      const res = deleteQuest(id);
+      btn.disabled = true;
+      const res = await deleteQuest(id);
+      btn.disabled = false;
       if (!res.ok) {
         window.alert(res.error ?? 'Nepodarilo sa zmazať.');
         return;
       }
-      refresh();
+      await refreshQuests();
     });
   }
 }
@@ -252,7 +303,7 @@ function bindProposeForm(): void {
   const btn = document.querySelector<HTMLButtonElement>('#quest-propose-btn');
   if (!form) return;
 
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (msg) msg.textContent = '';
 
@@ -280,15 +331,19 @@ function bindProposeForm(): void {
     }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Odosielam…'; }
-    const result = createQuest(input);
+    const result = await createQuest(input);
     if (btn) { btn.disabled = false; btn.textContent = 'Poslať návrh učiteľovi'; }
 
     if (!result.ok) {
       if (msg) msg.textContent = result.error ?? 'Nepodarilo sa uložiť.';
       return;
     }
-    if (msg) msg.textContent = 'Návrh poslaný učiteľovi. Po schválení môžeš odovzdať riešenie.';
-    setTimeout(refresh, 350);
+    if (msg) {
+      msg.textContent = result.source === 'db'
+        ? 'Návrh poslaný učiteľovi. Po schválení môžeš odovzdať riešenie.'
+        : 'Návrh uložený lokálne (demo režim).';
+    }
+    await refreshQuests();
   });
 }
 
@@ -298,11 +353,13 @@ function bindAiForm(): void {
   const btn = document.querySelector<HTMLButtonElement>('#quest-ai-btn');
   if (!form) return;
 
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (msg) msg.textContent = '';
 
     const topic = readVal('#q-ai-topic');
+    const gradeRaw = readVal('#q-ai-grade');
+    const grade = gradeRaw ? Number(gradeRaw) : undefined;
     const deadline = readVal('#q-ai-deadline') || undefined;
 
     if (topic.length < 3) {
@@ -311,52 +368,39 @@ function bindAiForm(): void {
     }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Generujem…'; }
-    // Phase A: scaffold a credible template that the student then refines.
-    // Phase B will replace this with a real call to /api/student/quests/generate
-    // backed by OpenAI (gpt-5.x).
-    const template = scaffoldFromTopic(topic);
-    const result = createQuest({
-      title: template.title,
-      goal: template.goal,
-      affectedGroup: template.affectedGroup,
-      evidence: template.evidence,
-      firstIdea: template.firstIdea,
+    const draft = await generateQuestDraft({ topic, grade, proposedDeadline: deadline });
+    if (btn) { btn.disabled = false; btn.textContent = 'Vygenerovať a poslať'; }
+
+    if (!draft.ok || !draft.draft) {
+      if (msg) msg.textContent = draft.error ?? 'AI návrh sa nepodarilo vygenerovať.';
+      return;
+    }
+
+    const d = draft.draft;
+    const result = await createQuest({
+      title: d.title,
+      description: d.description,
+      goal: d.goal,
+      affectedGroup: d.affectedGroup,
+      evidence: d.evidence,
+      firstIdea: d.firstIdea,
       proposedDeadline: deadline,
       source: 'ai',
+      aiModel: d.aiModel,
+      aiPrompt: undefined,
     });
-    if (btn) { btn.disabled = false; btn.textContent = 'Vygenerovať návrh'; }
-
     if (!result.ok) {
-      if (msg) msg.textContent = result.error ?? 'Nepodarilo sa uložiť.';
+      if (msg) msg.textContent = result.error ?? 'Návrh sa nepodarilo uložiť.';
       return;
     }
     if (msg) {
-      msg.textContent =
-        'Návrh pripravený a poslaný učiteľovi (offline šablóna). Plné AI generovanie z OpenAI sa zapne v ďalšej iterácii.';
+      const modelLabel = draft.source === 'openai' ? `AI (${escapeHtml(d.aiModel ?? 'openai')})` : 'demo šablóna';
+      msg.textContent = `Návrh vygenerovaný (${modelLabel}) a poslaný učiteľovi.`;
     }
-    setTimeout(refresh, 600);
+    await refreshQuests();
   });
 }
 
-function scaffoldFromTopic(topic: string): {
-  title: string;
-  goal: string;
-  affectedGroup: string;
-  evidence: string;
-  firstIdea: string;
-} {
-  const cleanTopic = topic.replace(/^./, (c) => c.toLowerCase());
-  return {
-    title: `Misia: ${topic.charAt(0).toUpperCase()}${topic.slice(1)}`,
-    goal: `Urobiť jeden konkrétny krok, ktorý zlepší situáciu v oblasti „${cleanTopic}“ v našej triede / škole.`,
-    affectedGroup: 'naša trieda',
-    evidence: `Zmapovať aktuálny stav v oblasti „${cleanTopic}“ — pozorovanie, krátky rozhovor alebo merania (3–5 dní).`,
-    firstIdea: `Navrhnúť 1 konkrétne zlepšenie v oblasti „${cleanTopic}“ a otestovať ho v malom (napr. jeden týždeň).`,
-  };
-}
-
 export function mountStudentQuestsPage(): void {
-  bindDelete();
-  bindProposeForm();
-  bindAiForm();
+  pendingMount?.();
 }
