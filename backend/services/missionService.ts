@@ -5,9 +5,12 @@
  * served from Supabase, but the service interface stays the same so callers
  * (API routes) do not change.
  */
-import competenciesData from '../../data/competencies.json';
-import missionsData from '../../data/missions.json';
-import badgesData from '../../data/badges.json';
+// Node 22 ESM requires explicit `with { type: 'json' }` import attributes
+// for JSON modules. Without them the function crashes at load time on
+// Vercel (which runs @vercel/node@3 under Node 22 ESM).
+import competenciesData from '../../data/competencies.json' with { type: 'json' };
+import missionsData from '../../data/missions.json' with { type: 'json' };
+import badgesData from '../../data/badges.json' with { type: 'json' };
 
 export interface CompetencyMapping {
   framework: string;
