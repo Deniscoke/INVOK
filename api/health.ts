@@ -115,6 +115,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // information, not a deployment bug.
   checks.supabaseAdmin_construct = asResult(adminCheck);
 
+  // Live OpenAI key check: only runs when provider=openai + a key is present.
+  // Uses models.retrieve (no token cost) to prove the *deployed* key is valid —
+  // distinguishes an invalid/mis-pasted key (401) from other failures. The
+  // OpenAI error message masks the key; we never log the key ourselves.
+  const openaiCheck = await timed(async () => {
+    const { getServerEnv, shouldUseOpenAI } = await import('../backend/lib/env.js');
+    const env = getServerEnv();
+    if (!shouldUseOpenAI(env)) return `mock mode (provider=${env.openaiValidationProvider}, keyPresent=${Boolean(env.openaiApiKey)})`;
+    const { default: OpenAI } = await import('openai');
+    const client = new OpenAI({ apiKey: env.openaiApiKey });
+    const model = await client.models.retrieve(env.openaiValidationModel);
+    return `key OK, model "${model.id}" reachable`;
+  });
+  checks.openai_liveKeyCheck = asResult(openaiCheck);
+
   res.status(200).json({
     ...base,
     deep: true,
