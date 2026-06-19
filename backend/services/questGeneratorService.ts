@@ -198,8 +198,8 @@ export async function generateQuest(input: unknown): Promise<GenerateResult> {
 
     const completion = await client.chat.completions.create(
       {
-        model: env.openaiValidationModel,
-        ...(supportsTemperature(env.openaiValidationModel) ? { temperature: 0.4 } : {}),
+        model: env.openaiQuestModel,
+        ...(supportsTemperature(env.openaiQuestModel) ? { temperature: 0.4 } : {}),
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },
@@ -245,7 +245,7 @@ export async function generateQuest(input: unknown): Promise<GenerateResult> {
       competencyIds: filteredCompetencies.length > 0 ? filteredCompetencies : ['maker_venture'],
       xpEstimate: Math.min(250, Math.max(30, Math.round(Number(parsed.xpEstimate ?? 100)))),
       source: 'ai',
-      aiModel: env.openaiValidationModel,
+      aiModel: env.openaiQuestModel,
       aiPrompt: userPrompt,
       rationale: String(parsed.rationale ?? ''),
       rvpAlignment: String(parsed.rvpAlignment ?? ''),

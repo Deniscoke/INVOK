@@ -15,6 +15,9 @@ export interface ServerEnv {
   supabaseServiceRoleKey: string | undefined;
   openaiApiKey: string | undefined;
   openaiValidationModel: string;
+  /** Model for AI quest generation. Independent of the validation model so a
+   *  slow flagship (e.g. gpt-5.5) set for scoring can't time out quest drafts. */
+  openaiQuestModel: string;
   openaiValidationProvider: AIValidationProvider;
   openaiValidationTimeoutMs: number;
   openaiValidationLogRawPrompts: boolean;
@@ -50,6 +53,9 @@ export function getServerEnv(): ServerEnv {
     // supports `temperature`, and costs a fraction of the flagship models.
     // Flagship gpt-5.x is overkill here AND rejects custom temperature.
     openaiValidationModel: env.OPENAI_VALIDATION_MODEL ?? 'gpt-4.1-mini',
+    // Quest generation defaults to a fast model even if OPENAI_VALIDATION_MODEL
+    // is a slow flagship — otherwise the draft call times out → silent mock.
+    openaiQuestModel: env.OPENAI_QUEST_MODEL ?? 'gpt-4.1-mini',
     openaiValidationProvider: env.OPENAI_VALIDATION_PROVIDER === 'openai' ? 'openai' : 'mock',
     openaiValidationTimeoutMs: positiveInt(env.OPENAI_VALIDATION_TIMEOUT_MS, 15_000),
     openaiValidationLogRawPrompts: env.OPENAI_VALIDATION_LOG_RAW_PROMPTS === 'true',
