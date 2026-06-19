@@ -33,7 +33,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const segments = routeSegments(req, 'admin');
   const root = segments[0] ?? '';
-  const id = segments[1];
+  // Vercel's catch-all only matches one path segment under a custom-rewrites
+  // config, so `student-codes/<id>` arrives as `student-codes?id=<id>`.
+  const id = segments[1] ?? (typeof req.query.id === 'string' ? req.query.id : undefined);
 
   try {
     if (root === 'schools' && req.method === 'POST') {

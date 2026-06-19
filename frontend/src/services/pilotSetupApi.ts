@@ -125,7 +125,7 @@ export async function listStudentCodes(classId: string): Promise<StudentCodeItem
 
 export async function deactivateStudentCode(id: string): Promise<{ ok: boolean }> {
   try {
-    const res = await fetch(`/api/admin/student-codes/${encodeURIComponent(id)}`, { method: 'DELETE', headers: await authHeaders() });
+    const res = await fetch(`/api/admin/student-codes?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: await authHeaders() });
     if (!res.ok) throw new Error();
     return { ok: true };
   } catch {

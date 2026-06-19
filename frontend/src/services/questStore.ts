@@ -235,7 +235,7 @@ async function apiCreate(input: CreateQuestInput): Promise<QuestMutationResult> 
 }
 
 async function apiDelete(id: string): Promise<QuestMutationResult> {
-  const res = await fetch(`/api/student/quests/${encodeURIComponent(id)}`, {
+  const res = await fetch(`/api/student/quests?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -247,7 +247,7 @@ async function apiDelete(id: string): Promise<QuestMutationResult> {
 }
 
 async function apiGenerate(input: GenerateInput): Promise<GenerateDraftResult> {
-  const res = await fetch('/api/student/quests/generate', {
+  const res = await fetch('/api/student/quests?mode=generate', {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...authHeaders() },
     body: JSON.stringify(input),

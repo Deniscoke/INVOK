@@ -71,8 +71,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    // /api/student/quests/generate — AI draft (does not persist).
-    if (subroute === 'generate') {
+    // /api/student/quests/generate OR /api/student/quests?mode=generate — AI draft.
+    // (Vercel's catch-all only matches one path segment under a custom-rewrites
+    // config, so the query form is what the frontend actually uses.)
+    if (subroute === 'generate' || req.query.mode === 'generate') {
       if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         res.status(405).json({ error: 'Method Not Allowed' });
@@ -112,7 +114,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     if (req.method === 'DELETE') {
-      const id = subroute || String(body.id ?? '');
+      const id = subroute || (typeof req.query.id === 'string' ? req.query.id : '') || String(body.id ?? '');
       if (!id) {
         res.status(400).json({ ok: false, error: 'Chýba ID misie.' });
         return;

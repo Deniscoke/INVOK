@@ -52,8 +52,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   // /api/teacher/reviews and /api/teacher/reviews/[submissionId]
+  // (single-segment Vercel catch-all → the id may arrive as ?submissionId=)
   if (root === 'reviews') {
-    const submissionId = segments[1];
+    const submissionId = segments[1] ?? (typeof req.query.submissionId === 'string' ? req.query.submissionId : undefined);
 
     // GET /api/teacher/reviews/[submissionId]
     if (submissionId) {
