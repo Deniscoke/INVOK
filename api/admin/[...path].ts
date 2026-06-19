@@ -14,6 +14,7 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveContext, isTeacherOrAdmin } from '../../backend/lib/requestContext.js';
+import { routeSegments } from '../../backend/lib/routePath.js';
 import {
   createSchool,
   createClass,
@@ -30,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const segments = (req.query.path as string[] | undefined) ?? [];
+  const segments = routeSegments(req, 'admin');
   const root = segments[0] ?? '';
   const id = segments[1];
 

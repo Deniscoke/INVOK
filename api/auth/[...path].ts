@@ -7,6 +7,7 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { bearer, getUserFromToken, getProfile } from '../../backend/lib/authContext.js';
+import { routeSegments } from '../../backend/lib/routePath.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
@@ -15,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const segments = (req.query.path as string[] | undefined) ?? [];
+  const segments = routeSegments(req, 'auth');
   const route = segments[0] ?? '';
 
   try {

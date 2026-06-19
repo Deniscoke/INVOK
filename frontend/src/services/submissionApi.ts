@@ -121,9 +121,15 @@ export async function submitMission(payload: SubmissionPayload, photo?: PhotoEvi
     // Any kind of API breakage → safe local demo so testing/demo never blocks.
     if (!data || response.status >= 500) return submitDemo(payload, photo);
 
+    // Not authenticated / no class session (401/403): in a pilot demo the
+    // presenter may not have joined a class — fall back to the local demo
+    // scorer so "Odovzdať" still produces formative AI feedback.
+    if (response.status === 401 || response.status === 403) return submitDemo(payload, photo);
+
     const result = data as unknown as SubmissionResult & { error?: string };
     if (!response.ok || !result.ok) {
-      // Auth/validation errors from the server: show its message verbatim.
+      // Validation errors (400) etc.: show the server message verbatim so the
+      // student can fix their input.
       return { ok: false, error: result.error ?? 'Odovzdanie zlyhalo.', source: 'api' };
     }
     return { ...result, source: 'api' };

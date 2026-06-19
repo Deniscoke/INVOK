@@ -8,6 +8,7 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveContext, requireAuth } from '../../backend/lib/requestContext.js';
+import { routeSegments } from '../../backend/lib/routePath.js';
 import { enforceAiRateLimit, ipHashFromHeader } from '../../backend/lib/rateLimit.js';
 import { validateSubmissionInput } from '../../backend/validators/submissionValidator.js';
 import {
@@ -18,7 +19,7 @@ import {
 import { getTeacherReviewForSubmission } from '../../backend/services/teacherReviewService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  const segments = (req.query.path as string[] | undefined) ?? [];
+  const segments = routeSegments(req, 'submissions');
   const ctx = await resolveContext(req);
   if (!requireAuth(ctx)) {
     res.status(401).json({ error: 'Nie si prihlásený.' });

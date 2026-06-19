@@ -12,6 +12,7 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveContext, isTeacherOrAdmin } from '../../backend/lib/requestContext.js';
+import { routeSegments } from '../../backend/lib/routePath.js';
 import { validateDashboardFilters } from '../../backend/validators/dashboardValidator.js';
 import {
   getTeacherDashboardSummary,
@@ -35,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const segments = (req.query.path as string[] | undefined) ?? [];
+  const segments = routeSegments(req, 'dashboard');
   const route = segments[0] ?? '';
 
   try {

@@ -106,9 +106,12 @@ export async function signInTeacher(email: string, password: string): Promise<Ac
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      const hint = error.message.toLowerCase().includes('invalid')
-        ? ' Skontroluj e-mail a heslo, alebo si najprv vytvor účet.'
-        : '';
+      const lower = error.message.toLowerCase();
+      const hint = lower.includes('not confirmed') || lower.includes('email not confirmed')
+        ? ' Účet ešte nie je potvrdený. Klikni na potvrdzovací e-mail, alebo v Supabase vypni „Confirm email" (Authentication → Providers → Email) pre okamžité prihlásenie.'
+        : lower.includes('invalid')
+          ? ' Skontroluj e-mail a heslo, alebo si najprv vytvor účet.'
+          : '';
       return { ok: false, error: error.message + hint };
     }
     await refreshFromSupabase();

@@ -22,6 +22,7 @@ import {
   listOwnQuests,
 } from '../../backend/services/studentQuestService.js';
 import { generateQuest } from '../../backend/services/questGeneratorService.js';
+import { routeSegments } from '../../backend/lib/routePath.js';
 
 function bearerToken(req: VercelRequest): string | null {
   const header = req.headers.authorization ?? '';
@@ -30,15 +31,8 @@ function bearerToken(req: VercelRequest): string | null {
   return null;
 }
 
-function segmentsOf(req: VercelRequest): string[] {
-  const raw = req.query.path;
-  if (Array.isArray(raw)) return raw as string[];
-  if (typeof raw === 'string' && raw.length > 0) return [raw];
-  return [];
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  const segments = segmentsOf(req);
+  const segments = routeSegments(req, 'student');
   const route = segments[0] ?? '';
   const subroute = segments[1] ?? '';
   const body = (req.body ?? {}) as Record<string, unknown>;

@@ -11,6 +11,7 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { resolveContext, isTeacherOrAdmin, requireAuth } from '../../backend/lib/requestContext.js';
+import { routeSegments } from '../../backend/lib/routePath.js';
 import {
   createTeacherReview,
   listTeacherReviews,
@@ -22,7 +23,7 @@ import { validateQueryFilter } from '../../backend/validators/submissionValidato
 import { listClassPendingQuests, reviewQuest } from '../../backend/services/studentQuestService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  const segments = (req.query.path as string[] | undefined) ?? [];
+  const segments = routeSegments(req, 'teacher');
   const root = segments[0] ?? '';
 
   // /api/teacher/submissions
