@@ -45,7 +45,11 @@ export function getServerEnv(): ServerEnv {
     supabaseUrl: env.VITE_SUPABASE_URL,
     supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     openaiApiKey: env.OPENAI_API_KEY,
-    openaiValidationModel: env.OPENAI_VALIDATION_MODEL ?? 'gpt-5.5',
+    // Default to a fast, low-cost model. gpt-4.1-mini generates the Slovak
+    // quest/validation JSON in ~4s (fits the 10s Vercel function limit),
+    // supports `temperature`, and costs a fraction of the flagship models.
+    // Flagship gpt-5.x is overkill here AND rejects custom temperature.
+    openaiValidationModel: env.OPENAI_VALIDATION_MODEL ?? 'gpt-4.1-mini',
     openaiValidationProvider: env.OPENAI_VALIDATION_PROVIDER === 'openai' ? 'openai' : 'mock',
     openaiValidationTimeoutMs: positiveInt(env.OPENAI_VALIDATION_TIMEOUT_MS, 15_000),
     openaiValidationLogRawPrompts: env.OPENAI_VALIDATION_LOG_RAW_PROMPTS === 'true',

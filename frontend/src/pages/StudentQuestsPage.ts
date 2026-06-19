@@ -78,6 +78,7 @@ function questCard(q: StudentQuest): string {
       </div>
       <span class="chip ${badge.chipClass}" title="${escapeHtml(badge.hint)}">${badge.label}</span>
     </div>
+    ${q.description ? `<p style="margin:var(--space-3) 0 0;white-space:pre-line">${escapeHtml(q.description)}</p>` : ''}
     ${q.goal ? `<div class="mission__goal" style="margin-top:var(--space-3)"><strong>Cieľ:</strong> ${escapeHtml(q.goal)}</div>` : ''}
     ${q.affectedGroup ? `<p class="muted" style="margin:8px 0 0;font-size:var(--fs-sm)"><strong>Koho sa týka:</strong> ${escapeHtml(q.affectedGroup)}</p>` : ''}
     ${q.evidence ? `<p class="muted" style="margin:6px 0 0;font-size:var(--fs-sm)"><strong>Dôkaz:</strong> ${escapeHtml(q.evidence)}</p>` : ''}
@@ -206,7 +207,7 @@ function creationPanels(disabled: boolean): string {
           </label>
         </div>
         <p id="quest-ai-msg" class="muted" role="status" aria-live="polite"></p>
-        <button class="btn btn--primary" type="submit" id="quest-ai-btn" ${dis}>Vygenerovať a poslať</button>
+        <button class="btn btn--primary" type="submit" id="quest-ai-btn" ${dis}>Vygenerovať návrh</button>
       </form>
       <div id="quest-ai-preview" style="margin-top:var(--space-3)"></div>
     </section>
@@ -397,10 +398,47 @@ function bindProposeForm(): void {
   });
 }
 
+type AiDraft = NonNullable<Awaited<ReturnType<typeof generateQuestDraft>>['draft']>;
+
+/** Fold the student-facing "Čo sa naučíš" points into the persisted description. */
+function composeQuestDescription(d: AiDraft): string {
+  const base = (d.description ?? '').trim();
+  const outcomes = Array.isArray(d.learningOutcomes) ? d.learningOutcomes.filter((o) => o && o.trim()) : [];
+  if (outcomes.length === 0) return base;
+  return `${base}\n\nČo sa naučíš:\n${outcomes.map((o) => `• ${o.trim()}`).join('\n')}`;
+}
+
+function renderAiPreview(d: AiDraft, source: 'openai' | 'mock' | undefined): string {
+  const outcomes = Array.isArray(d.learningOutcomes) ? d.learningOutcomes.filter(Boolean) : [];
+  const sourceLabel = source === 'openai'
+    ? `🤖 AI návrh (${escapeHtml(d.aiModel ?? 'openai')})`
+    : 'Demo šablóna (AI nie je zapnuté na serveri)';
+  return `
+  <div class="card" style="border-left:4px solid var(--color-accent);background:var(--tint-accent, #eef2ff)">
+    <div class="muted" style="font-size:var(--fs-xs)">${sourceLabel} · skontroluj a pošli, alebo skús iný návrh</div>
+    <h3 style="margin:6px 0 0">${escapeHtml(d.title)}</h3>
+    ${d.description ? `<p style="margin:var(--space-3) 0 0">${escapeHtml(d.description)}</p>` : ''}
+    ${d.goal ? `<div class="mission__goal" style="margin-top:var(--space-3)"><strong>Cieľ:</strong> ${escapeHtml(d.goal)}</div>` : ''}
+    ${outcomes.length ? `<div style="margin-top:var(--space-3)"><strong>Čo sa naučíš:</strong>
+      <ul style="margin:6px 0 0;padding-left:18px">${outcomes.map((o) => `<li>${escapeHtml(o)}</li>`).join('')}</ul></div>` : ''}
+    ${d.affectedGroup ? `<p class="muted" style="margin:8px 0 0;font-size:var(--fs-sm)"><strong>Koho sa týka:</strong> ${escapeHtml(d.affectedGroup)}</p>` : ''}
+    ${d.evidence ? `<p class="muted" style="margin:6px 0 0;font-size:var(--fs-sm)"><strong>Dôkaz:</strong> ${escapeHtml(d.evidence)}</p>` : ''}
+    ${d.firstIdea ? `<p class="muted" style="margin:6px 0 0;font-size:var(--fs-sm)"><strong>Prvý nápad:</strong> ${escapeHtml(d.firstIdea)}</p>` : ''}
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4)">
+      <button type="button" class="btn btn--primary" data-action="quest-ai-confirm">Poslať učiteľovi ✓</button>
+      <button type="button" class="btn btn--ghost" data-action="quest-ai-retry">Skúsiť iný návrh</button>
+    </div>
+  </div>`;
+}
+
+// Holds the draft currently shown in the preview (awaiting the student's confirm).
+let stagedDraft: { draft: AiDraft; deadline?: string; source: 'openai' | 'mock' | undefined } | null = null;
+
 function bindAiForm(): void {
   const form = document.querySelector<HTMLFormElement>('#quest-ai-form');
   const msg = document.querySelector<HTMLParagraphElement>('#quest-ai-msg');
   const btn = document.querySelector<HTMLButtonElement>('#quest-ai-btn');
+  const preview = document.querySelector<HTMLElement>('#quest-ai-preview');
   if (!form) return;
 
   form.addEventListener('submit', async (event) => {
@@ -419,17 +457,44 @@ function bindAiForm(): void {
 
     if (btn) { btn.disabled = true; btn.textContent = 'Generujem…'; }
     const draft = await generateQuestDraft({ topic, grade, proposedDeadline: deadline });
-    if (btn) { btn.disabled = false; btn.textContent = 'Vygenerovať a poslať'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Vygenerovať návrh'; }
 
     if (!draft.ok || !draft.draft) {
       if (msg) msg.textContent = draft.error ?? 'AI návrh sa nepodarilo vygenerovať.';
       return;
     }
 
-    const d = draft.draft;
+    // Stage the draft for review — do NOT auto-send to the teacher.
+    stagedDraft = { draft: draft.draft, deadline, source: draft.source };
+    if (preview) {
+      preview.innerHTML = renderAiPreview(draft.draft, draft.source);
+      bindAiPreviewActions();
+    }
+    if (msg) msg.textContent = 'Skontroluj návrh nižšie. Ak sa ti páči, pošli ho učiteľovi.';
+  });
+}
+
+function bindAiPreviewActions(): void {
+  const msg = document.querySelector<HTMLParagraphElement>('#quest-ai-msg');
+  const preview = document.querySelector<HTMLElement>('#quest-ai-preview');
+
+  preview?.querySelector<HTMLButtonElement>('[data-action="quest-ai-retry"]')?.addEventListener('click', () => {
+    stagedDraft = null;
+    if (preview) preview.innerHTML = '';
+    if (msg) msg.textContent = 'Uprav oblasť záujmu (alebo ročník) a vygeneruj nový návrh.';
+    document.querySelector<HTMLInputElement>('#q-ai-topic')?.focus();
+  });
+
+  preview?.querySelector<HTMLButtonElement>('[data-action="quest-ai-confirm"]')?.addEventListener('click', async (event) => {
+    if (!stagedDraft) return;
+    const confirmBtn = event.currentTarget as HTMLButtonElement;
+    const { draft: d, deadline, source } = stagedDraft;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Odosielam…';
+
     const result = await createQuest({
       title: d.title,
-      description: d.description,
+      description: composeQuestDescription(d),
       goal: d.goal,
       affectedGroup: d.affectedGroup,
       evidence: d.evidence,
@@ -439,13 +504,17 @@ function bindAiForm(): void {
       aiModel: d.aiModel,
       aiPrompt: undefined,
     });
+
     if (!result.ok) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Poslať učiteľovi ✓';
       if (msg) msg.textContent = result.error ?? 'Návrh sa nepodarilo uložiť.';
       return;
     }
+    stagedDraft = null;
     if (msg) {
-      const modelLabel = draft.source === 'openai' ? `AI (${escapeHtml(d.aiModel ?? 'openai')})` : 'demo šablóna';
-      msg.textContent = `Návrh vygenerovaný (${modelLabel}) a poslaný učiteľovi.`;
+      const modelLabel = source === 'openai' ? `AI (${escapeHtml(d.aiModel ?? 'openai')})` : 'demo šablóna';
+      msg.textContent = `Návrh (${modelLabel}) poslaný učiteľovi.`;
     }
     await refreshQuests();
   });

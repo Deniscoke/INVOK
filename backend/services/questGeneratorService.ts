@@ -21,6 +21,8 @@ export interface QuestDraft {
   affectedGroup: string;
   evidence: string;
   firstIdea: string;
+  /** 2–4 short, student-facing "Čo sa naučíš" points (written TO the pupil). */
+  learningOutcomes: string[];
   competencyIds: string[];
   xpEstimate: number;
   source: 'ai';
@@ -42,33 +44,49 @@ export type GenerateResult =
   | { ok: false; error: string };
 
 const SYSTEM_PROMPT = `Si pedagóg-asistent platformy INVOK pre slovenské základné školy.
-Tvojou úlohou je navrhnúť ŽIAKOM realizovateľnú misiu (quest), ktorá:
-1. Rieši konkrétny lokálny problém (škola / trieda / komunita).
-2. Je v súlade s INVOK kompetenciami a Štátnym vzdelávacím programom ŠVP ZV.
-3. Je vekovo primeraná žiakom 2. stupňa ZŠ (5.–9. ročník).
-4. Vedie k podnikavému prvému kroku — niečo malé a merateľné, čo žiak môže
-   urobiť do 1–3 týždňov bez špeciálneho vybavenia.
-5. Má jasný dôkaz (čo žiak zmeria / pozoruje / spýta sa) a prvý nápad na
-   riešenie. NEMÁ byť len opisom problému.
+Navrhuješ ŽIAKOM 8. a 9. ročníka (13–15 r.) realizovateľnú misiu (quest).
+
+Misia MUSÍ:
+1. Riešiť konkrétny lokálny problém (škola / trieda / komunita), nie všeobecnú tému.
+2. Byť v súlade s INVOK kompetenciami a Štátnym vzdelávacím programom ŠVP ZV.
+3. Viesť k podnikavému prvému kroku — niečo malé a merateľné, čo žiak zvládne do
+   1–3 týždňov bez špeciálneho vybavenia.
+4. Mať jasný dôkaz (čo žiak zmeria / pozoruje / spýta sa) a konkrétny prvý nápad
+   na riešenie. NESMIE byť len opisom problému.
+
+Štýl písania (DÔLEŽITÉ):
+- Píš PRIAMO ŽIAKOVI, oslovuj ho „ty" („Zistíš…", „Naučíš sa…", „Vyskúšaš si…").
+- Jazyk jednoduchý, konkrétny a motivujúci — primeraný 13–15-ročným.
+- "description" (2–4 vety) zrozumiteľne vysvetlí, O ČOM misia je, ČO bude žiak
+   robiť a PREČO to má zmysel.
+- "learningOutcomes": 2–4 krátke body „Čo sa naučíš" — každý sa začína slovesom
+   v 2. osobe (napr. „Naučíš sa overiť zdroj informácie."). Konkrétne zručnosti,
+   nie fráza „rozvinieš kompetencie".
 
 Zakázané:
 - Politické, citlivé alebo osobné/zdravotné témy bez kontextu pedagóga.
 - Nereálne ambície (vyriešiť svetový hlad atď.).
 - Návrhy, ktoré porušujú súkromie tretích osôb.
 
-Tvoj výstup MUSÍ byť JSON podľa schémy nižšie. V poliach používaj slovenčinu.`;
+Tvoj výstup MUSÍ byť JSON podľa schémy nižšie. Všetky polia píš po slovensky.`;
 
 const RESPONSE_SCHEMA = {
   type: 'object',
-  required: ['title', 'description', 'goal', 'affectedGroup', 'evidence', 'firstIdea', 'competencyIds', 'xpEstimate', 'rationale', 'rvpAlignment'],
+  required: ['title', 'description', 'goal', 'affectedGroup', 'evidence', 'firstIdea', 'learningOutcomes', 'competencyIds', 'xpEstimate', 'rationale', 'rvpAlignment'],
   additionalProperties: false,
   properties: {
     title: { type: 'string', minLength: 5, maxLength: 120 },
-    description: { type: 'string', minLength: 30, maxLength: 600 },
+    description: { type: 'string', minLength: 40, maxLength: 600 },
     goal: { type: 'string', minLength: 20, maxLength: 400 },
     affectedGroup: { type: 'string', minLength: 3, maxLength: 200 },
     evidence: { type: 'string', minLength: 20, maxLength: 500 },
     firstIdea: { type: 'string', minLength: 20, maxLength: 500 },
+    learningOutcomes: {
+      type: 'array',
+      items: { type: 'string', minLength: 8, maxLength: 160 },
+      minItems: 2,
+      maxItems: 4,
+    },
     competencyIds: {
       type: 'array',
       items: { type: 'string' },
@@ -87,7 +105,7 @@ function competencyContextBlock(): string {
 }
 
 function buildUserPrompt(input: GenerateQuestInput): string {
-  const grade = input.grade ?? 7;
+  const grade = input.grade ?? 8;
   const aliasNote = input.studentAlias ? `\nPrezývka žiaka (len pre kontext): ${input.studentAlias}.` : '';
   return [
     `Oblasť záujmu žiaka: "${input.topic}".`,
@@ -110,11 +128,16 @@ function mockDraft(input: GenerateQuestInput): QuestDraft {
   const cleanTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
   return {
     title: `Misia: ${cleanTopic}`,
-    description: `Skupina žiakov sa pozrie na ${topic.toLowerCase()} v škole. Cieľom je zlepšiť jednu konkrétnu vec v okolí žiakov a vyskúšať si podnikavý krok.`,
+    description: `V tejto misii sa pozrieš na oblasť „${topic.toLowerCase()}“ vo svojej škole alebo triede. Najprv zistíš, ako to vyzerá teraz, potom navrhneš jedno konkrétne zlepšenie a vyskúšaš ho v malom. Naučíš sa všímať si problémy okolo seba a riešiť ich podnikavo.`,
     goal: `Urobiť jeden merateľný krok, ktorý zlepší situáciu v oblasti „${topic}“ — od pozorovania cez nápad po vyskúšanie v malom.`,
     affectedGroup: 'naša trieda a školská komunita',
     evidence: `Krátke pozorovanie (3–5 dní) alebo prieskum (5–10 spolužiakov) o tom, ako vyzerá súčasný stav v oblasti „${topic}“.`,
     firstIdea: `Navrhnúť 1 konkrétne, lacné a rýchle zlepšenie v oblasti „${topic}“ a otestovať ho v jednom týždni.`,
+    learningOutcomes: [
+      `Naučíš sa pozorovať a zmerať, ako vyzerá súčasný stav v oblasti „${topic}“.`,
+      'Navrhneš konkrétne riešenie a vyskúšaš ho v malom.',
+      'Vyhodnotíš, či tvoj nápad zabral, a poučíš sa z výsledku.',
+    ],
     competencyIds: ['fact_detective', 'maker_venture'],
     xpEstimate: 100,
     source: 'ai',
@@ -123,6 +146,16 @@ function mockDraft(input: GenerateQuestInput): QuestDraft {
     rationale: 'Demo režim — AI nie je zapnuté, použitá je offline šablóna založená na vstupnej téme.',
     rvpAlignment: 'Prierezové gramotnosti (občianska, mediálna), oblasť „Človek a svet práce“ — podnikavosť a tvorivosť.',
   };
+}
+
+/**
+ * GPT-5.x and the o-series reasoning models reject a custom `temperature` on
+ * chat.completions (only the default 1 is allowed) — sending one makes the call
+ * 400 and we silently fall back to mock. Only attach temperature for models that
+ * accept it (4o / 4.1 family).
+ */
+export function supportsTemperature(model: string): boolean {
+  return !/^(gpt-5|o\d)/i.test(model);
 }
 
 function validateInput(input: unknown): { ok: true; value: GenerateQuestInput } | { ok: false; error: string } {
@@ -166,7 +199,7 @@ export async function generateQuest(input: unknown): Promise<GenerateResult> {
     const completion = await client.chat.completions.create(
       {
         model: env.openaiValidationModel,
-        temperature: 0.4,
+        ...(supportsTemperature(env.openaiValidationModel) ? { temperature: 0.4 } : {}),
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },
@@ -194,6 +227,13 @@ export async function generateQuest(input: unknown): Promise<GenerateResult> {
     const validCompetencies = getCompetencies().map((c) => c.id);
     const filteredCompetencies = competencyIds.filter((id) => validCompetencies.includes(id));
 
+    const learningOutcomes = Array.isArray(parsed.learningOutcomes)
+      ? (parsed.learningOutcomes as unknown[])
+          .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+          .map((x) => x.trim().slice(0, 160))
+          .slice(0, 4)
+      : [];
+
     const draft: QuestDraft = {
       title: String(parsed.title ?? '').slice(0, 120),
       description: String(parsed.description ?? '').slice(0, 600),
@@ -201,6 +241,7 @@ export async function generateQuest(input: unknown): Promise<GenerateResult> {
       affectedGroup: String(parsed.affectedGroup ?? '').slice(0, 200),
       evidence: String(parsed.evidence ?? '').slice(0, 500),
       firstIdea: String(parsed.firstIdea ?? '').slice(0, 500),
+      learningOutcomes,
       competencyIds: filteredCompetencies.length > 0 ? filteredCompetencies : ['maker_venture'],
       xpEstimate: Math.min(250, Math.max(30, Math.round(Number(parsed.xpEstimate ?? 100)))),
       source: 'ai',

@@ -86,6 +86,7 @@ export interface GenerateDraftResult {
     affectedGroup: string;
     evidence: string;
     firstIdea: string;
+    learningOutcomes?: string[];
     xpEstimate: number;
     rationale?: string;
     rvpAlignment?: string;
@@ -318,11 +319,16 @@ export async function generateQuestDraft(input: GenerateInput): Promise<Generate
     source: 'mock',
     draft: {
       title: `Misia: ${input.topic.charAt(0).toUpperCase()}${input.topic.slice(1)}`,
-      description: `Žiaci sa pozrú na oblasť „${input.topic}“ vo svojej škole a komunite, popíšu súčasný stav a navrhnú jeden konkrétny krok zlepšenia.`,
+      description: `V tejto misii sa pozrieš na oblasť „${input.topic}“ vo svojej škole a komunite. Zistíš, ako to vyzerá teraz, navrhneš jedno konkrétne zlepšenie a vyskúšaš ho v malom.`,
       goal: `Urobiť 1 merateľný krok, ktorý zlepší situáciu v oblasti „${input.topic}“.`,
       affectedGroup: 'naša trieda',
       evidence: `3–5 dní krátkeho pozorovania alebo prieskumu v oblasti „${input.topic}“.`,
       firstIdea: `Navrhnúť 1 konkrétne lacné zlepšenie v oblasti „${input.topic}“ a otestovať ho v jednom týždni.`,
+      learningOutcomes: [
+        `Naučíš sa pozorovať a zmerať súčasný stav v oblasti „${input.topic}“.`,
+        'Navrhneš konkrétne riešenie a vyskúšaš ho v malom.',
+        'Vyhodnotíš, či tvoj nápad zabral.',
+      ],
       xpEstimate: 100,
       source: 'ai',
       aiModel: 'mock-quest-scaffold-v1',
