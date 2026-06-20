@@ -12,11 +12,12 @@
  *   2. Set AVATAR_MODE = 'png' below.
  * In PNG mode `setMouthOpen` swaps mouth_closed ⇄ mouth_open at a threshold.
  */
-// 'image' = single base PNG (public/smarta/avatar_base.png) with a voice-reactive
-//           pulse (current default — we have one portrait, no mouth frames yet).
-// 'png'   = avatar_base + mouth_closed/mouth_open swap for real lip-sync.
-// 'svg'   = built-in inline SVG (no assets needed).
-const AVATAR_MODE: 'svg' | 'image' | 'png' = 'image';
+// 'frames' = full-portrait swap closed↔open driven by voice amplitude (current).
+//            Uses public/smarta/avatar_base.png (closed) + frame_open.png (open).
+// 'image'  = single base PNG with a voice-reactive pulse (no mouth swap).
+// 'png'    = avatar_base + cropped mouth_closed/mouth_open overlays.
+// 'svg'    = built-in inline SVG (no assets needed).
+const AVATAR_MODE: 'svg' | 'image' | 'png' | 'frames' = 'frames';
 
 export interface SmartaAvatar {
   /** Root element to insert into the DOM. */
@@ -25,7 +26,16 @@ export interface SmartaAvatar {
   setMouthOpen: (amount: number) => void;
   /** Toggles the speaking state (idle bob / glow); also resets the mouth. */
   setSpeaking: (speaking: boolean) => void;
+  /** Optional: warm up heavy assets (e.g. when the panel first opens). */
+  preload?: () => void;
 }
+
+// --- Lip-sync tuning (safe to tweak; see public/smarta/README.md) -----------
+// Voice loudness (0..1, already scaled in lipSync.ts) thresholds with hysteresis
+// so the mouth doesn't flicker on consonants, plus a minimum hold per frame.
+const OPEN_AT = 0.16;   // open the mouth above this smoothed level
+const CLOSE_AT = 0.07;  // close the mouth below this smoothed level
+const MIN_HOLD_MS = 55; // don't swap frames faster than this
 
 const FACE_SVG = `
 <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -113,7 +123,61 @@ function createImageAvatar(): SmartaAvatar {
   };
 }
 
+/**
+ * Frame-swap avatar: two full portraits (closed + open) stacked; the open frame
+ * fades in/out based on the (smoothed, hysteresis-gated) voice loudness. Chosen
+ * frames must share the same framing — see SMARTA classification in the docs.
+ * The open frame is heavy, so it's lazy-loaded on first speak / preload().
+ */
+function createFramesAvatar(): SmartaAvatar {
+  const el = document.createElement('div');
+  el.className = 'smarta-avatar smarta-avatar--frames';
+  el.innerHTML =
+    '<img class="smarta-frame smarta-frame--closed" src="/smarta/avatar_base.png" alt="Smarta">' +
+    '<img class="smarta-frame smarta-frame--open" alt="" data-src="/smarta/frame_open.png">';
+  const openImg = el.querySelector<HTMLImageElement>('.smarta-frame--open');
+
+  let openShown = false;
+  let lastSwap = 0;
+  let smooth = 0;
+
+  function ensureOpenLoaded(): void {
+    if (openImg && !openImg.getAttribute('src') && openImg.dataset.src) {
+      openImg.src = openImg.dataset.src;
+    }
+  }
+  function apply(open: boolean): void {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (open === openShown || now - lastSwap < MIN_HOLD_MS) return;
+    openShown = open;
+    lastSwap = now;
+    el.classList.toggle('is-open', open);
+  }
+
+  return {
+    el,
+    preload: ensureOpenLoaded,
+    setMouthOpen(amount: number): void {
+      // Exponential smoothing damps the per-frame jitter from the analyser.
+      smooth = smooth * 0.55 + Math.max(0, Math.min(1, amount)) * 0.45;
+      if (smooth > OPEN_AT) apply(true);
+      else if (smooth < CLOSE_AT) apply(false);
+    },
+    setSpeaking(speaking: boolean): void {
+      el.classList.toggle('smarta-avatar--speaking', speaking);
+      if (speaking) {
+        ensureOpenLoaded();
+      } else {
+        smooth = 0;
+        openShown = false;
+        el.classList.remove('is-open');
+      }
+    },
+  };
+}
+
 export function createAvatar(): SmartaAvatar {
+  if (AVATAR_MODE === 'frames') return createFramesAvatar();
   if (AVATAR_MODE === 'png') return createPngAvatar();
   if (AVATAR_MODE === 'image') return createImageAvatar();
   return createSvgAvatar();

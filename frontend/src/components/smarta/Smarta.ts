@@ -116,6 +116,7 @@ function toggleOpen(force?: boolean): void {
   panel.classList.toggle('smarta-panel--open', open);
   panel.setAttribute('aria-hidden', String(!open));
   if (open) {
+    avatar.preload?.(); // warm up the heavy "open mouth" frame before speaking
     renderMessages();
     inputEl.focus();
   } else if (listening) {

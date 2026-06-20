@@ -1,32 +1,45 @@
 # Smarta avatar assets
 
-**Current setup:** the avatar uses `avatar_base.png` (single portrait) with a
-voice-reactive pulse during speech — `AVATAR_MODE = 'image'` in
-`frontend/src/components/smarta/avatar.ts`.
-
-For **true mouth lip-sync** (mouth visibly opening/closing with the voice), add two
-more cropped mouth frames and switch to PNG mode. Drop these files here:
+**Current setup — frame-swap lip-sync (`AVATAR_MODE = 'frames'`):**
+the avatar plays a 2-frame mouth animation driven by the voice loudness while
+Smarta speaks.
 
 ```
-public/smarta/avatar_base.png   # head + shoulders, mouth area left empty/neutral
-public/smarta/mouth_closed.png  # mouth — closed  (same canvas size, transparent bg)
-public/smarta/mouth_open.png    # mouth — open    (same canvas size, transparent bg)
+public/smarta/avatar_base.png   # CLOSED mouth  (idle + quiet moments)
+public/smarta/frame_open.png    # OPEN mouth    (shown on louder syllables)
 ```
 
-Recommendations:
-- Square canvas (e.g. 512×512), transparent background (PNG-24).
-- `mouth_*` images must align exactly over `avatar_base` (same size/position), so
-  swapping them looks like the mouth opening/closing.
+These were picked from the 11 source portraits in the (git-ignored) `SMARTA/`
+working folder, classified by mouth state:
 
-## Enabling PNG mode
+| Source frames | Mouth | Use |
+|---|---|---|
+| 1, 3, 5, 6, 9, 10, 11 | closed | idle / closed |
+| **4, 8** | **open** | talking |
+| 2, 7 | closed + wink | expression only |
 
-In `frontend/src/components/smarta/avatar.ts` set:
+`avatar_base.png` = frame **1**, `frame_open.png` = frame **8** — chosen because
+they share the same framing (longer hair, frontal), so swapping them looks clean
+with no head "jump". The portraits are expression variants, **not** a phoneme
+viseme set, so lip-sync is **amplitude-based** (loud → open, quiet → closed),
+not per-sound mouth shapes.
 
-```ts
-const AVATAR_MODE: 'svg' | 'png' = 'png';
-```
+## Tuning (if needed after testing)
 
-The lip-sync engine drives `setMouthOpen(0..1)`; in PNG mode it swaps
-`mouth_closed.png` ⇄ `mouth_open.png` at a threshold. For smoother animation later
-you can add more mouth frames / visemes or a Live2D model — the chat, TTS and
-lip-sync code stays unchanged (it only calls the avatar's `setMouthOpen`).
+In `frontend/src/components/smarta/avatar.ts`:
+- `OPEN_AT` / `CLOSE_AT` — loudness thresholds (lower = mouth opens more eagerly).
+- `MIN_HOLD_MS` — minimum time per frame (raise to calm flicker, lower for snappier).
+
+In `frontend/src/styles/smarta.css` (`.smarta-avatar--frames .smarta-frame`):
+- `object-position: center 36%` — vertical framing of the face in the circle.
+  Raise the % if the mouth is cropped out; lower it to show more of the mouth.
+
+## Future upgrades (architecture already supports them)
+- Add more open frames (e.g. half-open) for a 3–4 level mouth ladder.
+- A true viseme set (ah/oh/ee/mm…) + phoneme timing → swap `setMouthOpen` for a
+  `setViseme()` mapping; chat/TTS code stays unchanged.
+- Cropped `mouth_closed.png` + `mouth_open.png` overlays → `AVATAR_MODE = 'png'`.
+- Live2D model.
+
+> Tip: the frames are ~1.5 MB each (full portraits). For faster loading, resize
+> them to ~256×256 px — the avatar only renders at ~60 px.

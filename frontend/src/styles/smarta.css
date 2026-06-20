@@ -73,12 +73,13 @@
   color: #fff;
 }
 .smarta-panel__avatar {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   overflow: hidden;
   background: #fff;
   flex: 0 0 auto;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 .smarta-panel__title { display: flex; flex-direction: column; line-height: 1.15; margin-right: auto; }
 .smarta-panel__title strong { font-size: 15px; }
@@ -216,6 +217,23 @@
   transform-origin: center 35%;
   transition: transform 0.08s ease-out;
 }
+
+/* Frame-swap lip-sync: closed portrait underneath, open fades in on top.
+   object-position frames the mouth into the circular crop — tweak the % if your
+   art sits higher/lower. */
+.smarta-avatar--frames { position: relative; overflow: hidden; }
+.smarta-avatar--frames .smarta-frame {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 36%;
+  display: block;
+}
+.smarta-avatar--frames .smarta-frame--open {
+  opacity: 0;
+  transition: opacity 0.05s linear;
+}
+.smarta-avatar--frames.is-open .smarta-frame--open { opacity: 1; }
 .smarta-avatar--speaking { animation: smarta-bob 0.9s ease-in-out infinite; }
 @keyframes smarta-bob {
   0%, 100% { transform: translateY(0); }
