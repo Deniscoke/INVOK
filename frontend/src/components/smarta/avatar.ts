@@ -12,7 +12,11 @@
  *   2. Set AVATAR_MODE = 'png' below.
  * In PNG mode `setMouthOpen` swaps mouth_closed ⇄ mouth_open at a threshold.
  */
-const AVATAR_MODE: 'svg' | 'png' = 'svg';
+// 'image' = single base PNG (public/smarta/avatar_base.png) with a voice-reactive
+//           pulse (current default — we have one portrait, no mouth frames yet).
+// 'png'   = avatar_base + mouth_closed/mouth_open swap for real lip-sync.
+// 'svg'   = built-in inline SVG (no assets needed).
+const AVATAR_MODE: 'svg' | 'image' | 'png' = 'image';
 
 export interface SmartaAvatar {
   /** Root element to insert into the DOM. */
@@ -85,6 +89,32 @@ function createPngAvatar(): SmartaAvatar {
   };
 }
 
+/**
+ * Single base image (no mouth frames). Until cropped mouth_closed/mouth_open
+ * art exists, we give "speaking" feedback via a subtle voice-reactive pulse +
+ * the idle bob. Swap to AVATAR_MODE 'png' once mouth frames are added.
+ */
+function createImageAvatar(): SmartaAvatar {
+  const el = document.createElement('div');
+  el.className = 'smarta-avatar smarta-avatar--img';
+  el.innerHTML = '<img class="smarta-avatar__base" src="/smarta/avatar_base.png" alt="Smarta">';
+  const img = el.querySelector<HTMLImageElement>('img');
+  return {
+    el,
+    setMouthOpen(amount: number): void {
+      if (!img) return;
+      const v = Math.max(0, Math.min(1, amount));
+      img.style.transform = `scale(${(1 + v * 0.045).toFixed(3)})`;
+    },
+    setSpeaking(speaking: boolean): void {
+      el.classList.toggle('smarta-avatar--speaking', speaking);
+      if (!speaking && img) img.style.transform = '';
+    },
+  };
+}
+
 export function createAvatar(): SmartaAvatar {
-  return AVATAR_MODE === 'png' ? createPngAvatar() : createSvgAvatar();
+  if (AVATAR_MODE === 'png') return createPngAvatar();
+  if (AVATAR_MODE === 'image') return createImageAvatar();
+  return createSvgAvatar();
 }

@@ -1,8 +1,11 @@
 # Smarta avatar assets
 
-The assistant avatar renders an **inline SVG by default** (no files needed), so
-Smarta works out of the box. To use your own 2D PNG artwork instead, drop three
-files here:
+**Current setup:** the avatar uses `avatar_base.png` (single portrait) with a
+voice-reactive pulse during speech — `AVATAR_MODE = 'image'` in
+`frontend/src/components/smarta/avatar.ts`.
+
+For **true mouth lip-sync** (mouth visibly opening/closing with the voice), add two
+more cropped mouth frames and switch to PNG mode. Drop these files here:
 
 ```
 public/smarta/avatar_base.png   # head + shoulders, mouth area left empty/neutral

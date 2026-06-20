@@ -207,6 +207,15 @@
 .smarta-avatar--png .smarta-avatar__mouth-img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
 }
+.smarta-avatar--img { overflow: hidden; }
+.smarta-avatar--img .smarta-avatar__base {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  display: block;
+  transform-origin: center 35%;
+  transition: transform 0.08s ease-out;
+}
 .smarta-avatar--speaking { animation: smarta-bob 0.9s ease-in-out infinite; }
 @keyframes smarta-bob {
   0%, 100% { transform: translateY(0); }
