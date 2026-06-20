@@ -22,6 +22,9 @@ import { openQuestionnaire } from '../components/Questionnaire';
 import { fetchMyQuestionnaires } from '../services/questionnaireApi';
 
 let pendingMount: (() => void) | null = null;
+// The legacy demo dashboard is opt-in only — never shown to a logged-out visitor
+// by default (it used to masquerade as a real account, which was confusing).
+let demoOptIn = false;
 
 function escapeHtml(value: string): string {
   return value
@@ -252,6 +255,24 @@ async function loadJourney(alias: string): Promise<void> {
     ?.addEventListener('click', () => openQuestionnaire({ phase: 'output', onDone: reload }));
 }
 
+/** Logged-out view for /#/student — restoring spinner or a clear join prompt
+ *  (instead of the old demo masquerade). Demo is an explicit opt-in. */
+function notLoggedInView(restoring: boolean): string {
+  if (restoring) {
+    return `<div class="card"><p class="muted">Obnovujem tvoju reláciu… ${'\u{1F98A}'}</p></div>`;
+  }
+  return `
+  <section class="card" style="text-align:center;max-width:540px;margin:var(--space-6) auto">
+    <div style="font-size:44px;line-height:1">${'\u{1F98A}'}</div>
+    <h2 style="margin:8px 0 4px">Nie si prihlásený ako žiak</h2>
+    <p class="muted" style="margin:0 0 var(--space-4)">Pripoj sa kódom triedy od učiteľa a uvidíš svoju cestu — XP, kompetencie, odznaky, misie aj certifikát.</p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <a class="btn btn--primary" href="#/join">Pripojiť sa kódom</a>
+      <button type="button" class="btn btn--ghost" data-show-demo>Pozri demo ukážku</button>
+    </div>
+  </section>`;
+}
+
 export function StudentDashboardPage(): string {
   const authUser = getSnapshot().user;
   const realStudent = isRealStudentAccount();
@@ -260,6 +281,21 @@ export function StudentDashboardPage(): string {
     const alias = authUser?.displayName ?? 'žiak';
     pendingMount = () => { void loadJourney(alias); };
     return `<div id="journey-slot"><p class="muted">Načítavam tvoju cestu…</p></div>`;
+  }
+
+  // Not a real student. Don't show fake demo data as if it were a real account.
+  // If a student token exists, a session restore is in flight → show a brief
+  // "restoring" state (it re-renders on auth change). Otherwise prompt to join;
+  // the demo is available only as an explicit opt-in.
+  if (!demoOptIn) {
+    const hasToken = typeof localStorage !== 'undefined' && !!localStorage.getItem('invok_student_session');
+    pendingMount = () => {
+      document.querySelector('[data-show-demo]')?.addEventListener('click', () => {
+        demoOptIn = true;
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      });
+    };
+    return notLoggedInView(hasToken);
   }
 
   const student = getStudent();
@@ -333,11 +369,15 @@ export function StudentDashboardPage(): string {
   }
 
   return `
-  <section class="card">
+  <section class="card" style="border-left:4px solid var(--color-warm);background:var(--tint-warm)">
+    <strong>${'\u{1F9EA}'} Demo ukážka</strong>
+    <p class="muted" style="margin:6px 0 0">Toto sú <strong>ukážkové dáta</strong>, nie tvoj účet. <a href="#/join">Pripoj sa kódom triedy</a> a uvidíš svoju reálnu cestu.</p>
+  </section>
+  <section class="card" style="margin-top:var(--space-4)">
     <div class="identity">
       ${Mascot({ size: 72 })}
       <div>
-        <div class="muted">Pseudonymný žiak</div>
+        <div class="muted">Pseudonymný žiak (demo)</div>
         <div class="identity__alias">${alias}</div>
       </div>
     </div>
