@@ -315,10 +315,15 @@ async function dbCreate(ctx: RequestContext, input: SubmissionInput): Promise<Cr
       }
     }
 
+    // Quest submissions aren't tied to a catalog mission, so the free-form quest
+    // title is NOT a valid `missions(id)` FK. Use the seeded `custom-quest`
+    // placeholder; the real quest is linked via student_quests.submission_id.
+    const missionId = input.studentQuestId ? 'custom-quest' : input.missionId;
+
     const { data: sub, error: subErr } = await admin
       .from('submissions')
       .insert({
-        mission_id: input.missionId,
+        mission_id: missionId,
         student_id: studentId,
         student_access_code_id: studentAccessCodeId,
         class_id: classId,
