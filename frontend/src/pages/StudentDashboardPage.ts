@@ -15,6 +15,7 @@ import { fetchMyProgress, type SubmissionResult } from '../services/submissionAp
 import { listQuests, type StudentQuest } from '../services/questStore';
 import { competencyName, strengthToLevel, levelLabel } from '../services/competencyScale';
 import { openCertificate } from '../components/Certificate';
+import { computeModuleBadges } from '../services/moduleBadges';
 
 let pendingMount: (() => void) | null = null;
 
@@ -120,6 +121,32 @@ function renderCompetencyLevels(progress: { competencyProgress: { competencyId: 
   return `<div class="card"><h3 style="margin-top:0">${'\u{1F3AF}'} Tvoje kompetencie (1–5)</h3><ul style="list-style:none;margin:0;padding:0">${rows}</ul></div>`;
 }
 
+/** Collectible INVOK module badges, unlocked from real competency progress. */
+function renderModuleBadges(progress: { competencyProgress: { competencyId: string; mastery: number }[] }): string {
+  const states = computeModuleBadges(progress);
+  const earned = states.filter((s) => s.earned).length;
+  const cards = states
+    .map((s) => {
+      const locked = !s.earned;
+      const icon = locked ? '\u{1F512}' : s.badge.emoji;
+      const status = s.earned
+        ? '<span class="chip chip--accent" style="margin-top:8px">získaný ✓</span>'
+        : `<span class="chip chip--muted" style="margin-top:8px">${s.level}/5 · zamknutý</span>
+           <span class="muted" style="display:block;margin-top:6px;font-size:var(--fs-xs)">${escapeHtml(s.badge.unlockHint)}</span>`;
+      return `<div class="card badge-card${locked ? ' badge-card--locked' : ''}">
+        <div class="badge-card__icon" style="font-size:26px">${icon}</div>
+        <strong style="display:block">${escapeHtml(s.badge.name)}</strong>
+        <span class="muted" style="display:block;font-size:var(--fs-xs)">${escapeHtml(s.badge.module)}</span>
+        ${status}
+      </div>`;
+    })
+    .join('');
+  return `<div class="card">
+    <div class="card-title"><h3 style="margin:0">${'\u{1F3C5}'} Odznaky <span class="muted" style="font-weight:normal">(${earned}/4)</span></h3></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-3);margin-top:var(--space-3)">${cards}</div>
+  </div>`;
+}
+
 function renderMyMissions(quests: StudentQuest[]): string {
   const relevant = quests.filter((q) => q.state !== 'draft' && q.state !== 'rejected');
   const rows = relevant
@@ -154,7 +181,8 @@ async function loadJourney(alias: string): Promise<void> {
     <div class="stack">
       ${renderMyMissions(quests)}
     </div>
-  </div>`;
+  </div>
+  <div style="margin-top:var(--space-4)">${renderModuleBadges(progress)}</div>`;
   slot
     .querySelector<HTMLButtonElement>('[data-cert-btn]')
     ?.addEventListener('click', () => openCertificate({ alias }));
