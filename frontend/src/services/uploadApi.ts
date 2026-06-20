@@ -31,7 +31,13 @@ function studentToken(): string | null {
 /** Upload one file for a quest: ask the server for a signed URL, then upload. */
 export async function uploadQuestFile(studentQuestId: string, file: File): Promise<UploadedAttachment> {
   const token = studentToken();
-  if (!token || !supabase) throw new Error('Najprv sa pripoj do triedy svojím kódom.');
+  // Distinct, actionable reasons (a generic message hides why media "won't go").
+  if (!token) {
+    throw new Error('Nie si prihlásený ako žiak. Pripoj sa kódom triedy od učiteľa a skús to znova.');
+  }
+  if (!supabase) {
+    throw new Error('Nahrávanie súborov teraz nie je dostupné (chýba pripojenie k úložisku).');
+  }
   if (file.size > ATTACH_MAX_FILE_BYTES) throw new Error(`Súbor „${file.name}" je príliš veľký (max 50 MB).`);
 
   const res = await fetch('/api/student/upload', {
@@ -47,14 +53,24 @@ export async function uploadQuestFile(studentQuestId: string, file: File): Promi
   const data = (await res.json().catch(() => null)) as
     | { ok?: boolean; bucket?: string; path?: string; token?: string; error?: string }
     | null;
+  // An expired/invalid student session is the most common cause — and unlike a
+  // text submit (which silently falls back to a demo scorer), a media upload has
+  // no fallback, so make the real reason explicit and actionable.
+  if (res.status === 401) {
+    throw new Error('Tvoja relácia žiaka vypršala. Odhlás sa a znova sa pripoj kódom triedy od učiteľa, potom skús nahrať súbor.');
+  }
   if (!res.ok || !data?.ok || !data.bucket || !data.path || !data.token) {
-    throw new Error(data?.error ?? 'Nahrávanie zlyhalo.');
+    throw new Error(data?.error ?? `Súbor „${file.name}" sa nepodarilo pripraviť na nahranie.`);
   }
 
   const { error } = await supabase.storage
     .from(data.bucket)
     .uploadToSignedUrl(data.path, data.token, file, { contentType: file.type || undefined });
-  if (error) throw new Error(`Súbor „${file.name}" sa nepodarilo nahrať.`);
+  if (error) {
+    // Surface the real Storage reason instead of swallowing it.
+    const reason = error.message ? ` (${error.message})` : '';
+    throw new Error(`Súbor „${file.name}" sa nepodarilo nahrať${reason}.`);
+  }
 
   return { name: file.name, type: file.type || 'application/octet-stream', sizeBytes: file.size, path: data.path };
 }

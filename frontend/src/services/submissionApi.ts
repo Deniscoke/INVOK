@@ -136,9 +136,19 @@ export async function submitMission(payload: SubmissionPayload, photo?: PhotoEvi
     // Any kind of API breakage → safe local demo so testing/demo never blocks.
     if (!data || response.status >= 500) return submitDemo(payload, photo);
 
-    // Not authenticated / no class session (401/403): in a pilot demo the
-    // presenter may not have joined a class — fall back to the local demo
-    // scorer so "Odovzdať" still produces formative AI feedback.
+    // Not authenticated / no class session (401/403). A genuine pilot-demo
+    // presenter (no student token) keeps the local demo scorer so "Odovzdať"
+    // still produces formative AI feedback. But a LIVE student whose session
+    // expired should be told to rejoin — otherwise text submits silently
+    // "succeed" via the demo scorer while media uploads (no fallback) fail,
+    // which is exactly the confusing mismatch this avoids.
+    if (response.status === 401 && studentToken()) {
+      return {
+        ok: false,
+        source: 'api',
+        error: 'Tvoja relácia žiaka vypršala. Odhlás sa a znova sa pripoj kódom triedy od učiteľa, potom skús odovzdať.',
+      };
+    }
     if (response.status === 401 || response.status === 403) return submitDemo(payload, photo);
 
     const result = data as unknown as SubmissionResult & { error?: string };
