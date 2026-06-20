@@ -15,10 +15,15 @@
 import {
   listPendingQuests,
   reviewQuestRequest,
+  fetchSubmissionReview,
   type ApprovalDecision,
   type TeacherQuestRow,
+  type SubmissionEvaluation,
+  type ExistingSubmissionReview,
 } from '../../services/teacherQuestApi';
 import { listQuestFilesForTeacher } from '../../services/uploadApi';
+import { submitReview, type ReviewDecision } from '../../services/teacherReviewApi';
+import { competencyName, scoreToLevel, strengthToLevel, levelLabel } from '../../services/competencyScale';
 
 function escapeHtml(value: string): string {
   return value
@@ -87,6 +92,12 @@ function questCard(q: TeacherQuestRow): string {
       <div data-files-slot="${escapeHtml(q.id)}" style="margin-top:var(--space-2)"></div>
     </div>`}
 
+    ${q.state === 'submitted' && q.submissionId ? `
+    <div style="margin-top:var(--space-3)">
+      <button type="button" class="btn btn--primary btn--sm" data-review-btn="${escapeHtml(q.id)}" data-submission="${escapeHtml(q.submissionId)}">📊 Hodnotenie AI + potvrdiť výsledok</button>
+      <div data-review-slot="${escapeHtml(q.id)}" style="margin-top:var(--space-3)"></div>
+    </div>` : ''}
+
     ${isActionable ? `
     <form class="stack" data-quest-form="${escapeHtml(q.id)}" style="margin-top:var(--space-4);background:var(--tint-muted, #f8fafc);padding:var(--space-3);border-radius:var(--radius-md)">
       <label class="field">Spätná väzba pre žiaka
@@ -113,6 +124,67 @@ function questCard(q: TeacherQuestRow): string {
     </div>` : ''}
     `}
   </article>`;
+}
+
+/** AI's evaluation of the SUBMITTED solution, on the shared 1–5 competency scale. */
+function renderSubmissionEval(ev: SubmissionEvaluation): string {
+  const overall = scoreToLevel(ev.score);
+  const comps = (ev.detectedCompetencies ?? [])
+    .map((d) => {
+      const lvl = strengthToLevel(d.strength);
+      return `<li style="margin:2px 0"><strong>${escapeHtml(competencyName(d.id))}</strong>: ${lvl}/5 <span class="muted">(${levelLabel(lvl)})</span></li>`;
+    })
+    .join('');
+  const reasons = (ev.reasons ?? [])
+    .slice(0, 6)
+    .map((r) => {
+      const chip = r.result === 'met' ? 'chip--accent' : r.result === 'partial' ? 'chip--warm' : 'chip--muted';
+      return `<li style="margin:3px 0"><strong>${escapeHtml(r.criterion)}</strong>: ${escapeHtml(r.explanation)} <span class="chip ${chip}">${escapeHtml(r.result)}</span></li>`;
+    })
+    .join('');
+  return `
+  <div class="card" style="border-left:4px solid ${ev.valid ? 'var(--color-success)' : '#f59e0b'}">
+    <div class="muted" style="font-size:var(--fs-xs)">🤖 Hodnotenie AI (${escapeHtml(ev.model)}) — je to len NÁVRH, ty ho potvrdíš alebo upravíš</div>
+    <h4 style="margin:4px 0 0">Celkovo: ${overall}/5 <span class="muted">(${levelLabel(overall)})</span> · interné skóre ${ev.score}/100</h4>
+    ${comps ? `<p style="margin:10px 0 4px"><strong>V čom sa žiak preukázal (kompetencie):</strong></p><ul style="margin:0;padding-left:18px">${comps}</ul>` : ''}
+    ${reasons ? `<p style="margin:10px 0 4px"><strong>Prečo si to AI myslí:</strong></p><ul style="margin:0;padding-left:18px">${reasons}</ul>` : ''}
+  </div>`;
+}
+
+function renderReviewForm(questId: string, submissionId: string, ev: SubmissionEvaluation): string {
+  return `
+  <form class="card stack" data-review-form="${escapeHtml(questId)}" data-submission="${escapeHtml(submissionId)}" style="margin-top:var(--space-3);border-left:4px solid var(--color-accent)">
+    <h4 style="margin:0">Tvoje finálne hodnotenie</h4>
+    <label class="field">Rozhodnutie
+      <select data-rfield="decision">
+        <option value="approved">Potvrdiť výsledok (schváliť)</option>
+        <option value="adjusted">Upraviť skóre</option>
+        <option value="needs_revision">Vrátiť na dopracovanie</option>
+        <option value="rejected">Zamietnuť</option>
+      </select>
+    </label>
+    <label class="field">Finálne skóre (0–100) — zodpovedá úrovni 1–5
+      <input data-rfield="finalScore" type="number" min="0" max="100" value="${ev.score}">
+    </label>
+    <label class="field" style="flex-direction:row;align-items:center;gap:8px">
+      <input data-rfield="finalValid" type="checkbox" ${ev.valid ? 'checked' : ''}> Platné odovzdanie
+    </label>
+    <label class="field">Spätná väzba pre žiaka
+      <textarea data-rfield="feedbackText" rows="2" maxlength="1500" placeholder="Povzbudivá a konkrétna — v čom je dobrý, čo zlepšiť…"></textarea>
+    </label>
+    <p class="muted" data-review-msg="${escapeHtml(questId)}" role="status" aria-live="polite" style="margin:0"></p>
+    <button class="btn btn--primary" type="submit">Uložiť finálne hodnotenie a prideliť XP</button>
+  </form>`;
+}
+
+function renderExistingReview(review: ExistingSubmissionReview): string {
+  const level = scoreToLevel(review.finalScore);
+  return `
+  <div class="teacher-hint" style="margin-top:var(--space-3);border-left-color:var(--color-success)">
+    <div class="teacher-hint__label" style="color:#15803d">Tvoje finálne hodnotenie ✓</div>
+    Rozhodnutie: <strong>${escapeHtml(review.decision)}</strong> · skóre ${review.finalScore}/100 (úroveň ${level}/5 — ${levelLabel(level)})
+    ${review.feedbackText ? `<div style="margin-top:6px">${escapeHtml(review.feedbackText)}</div>` : ''}
+  </div>`;
 }
 
 interface PanelState {
@@ -152,6 +224,41 @@ async function refresh(): Promise<void> {
   } catch (err) {
     setState({ loading: false, rows: [], error: err instanceof Error ? err.message : 'Načítanie zlyhalo.' });
   }
+}
+
+function bindReviewForm(questId: string): void {
+  const form = containerRef?.querySelector<HTMLFormElement>(`form[data-review-form="${questId}"]`);
+  if (!form) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submissionId = form.getAttribute('data-submission') ?? '';
+    const decision = (form.querySelector('[data-rfield="decision"]') as HTMLSelectElement).value as ReviewDecision;
+    const finalScore = Number((form.querySelector('[data-rfield="finalScore"]') as HTMLInputElement).value);
+    const finalValid = (form.querySelector('[data-rfield="finalValid"]') as HTMLInputElement).checked;
+    const feedbackText = (form.querySelector('[data-rfield="feedbackText"]') as HTMLTextAreaElement).value.trim();
+    const msg = containerRef?.querySelector<HTMLElement>(`[data-review-msg="${questId}"]`);
+
+    if ((decision === 'needs_revision' || decision === 'rejected') && feedbackText.length < 5) {
+      if (msg) msg.textContent = 'Pri vrátení alebo zamietnutí napíš krátku spätnú väzbu.';
+      return;
+    }
+    const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+    const result = await submitReview({
+      submissionId,
+      decision,
+      finalValid,
+      finalScore,
+      feedbackText: feedbackText || undefined,
+      adjustmentReason: decision === 'adjusted' ? (feedbackText || 'Upravené učiteľom') : undefined,
+    });
+    if (submitBtn) submitBtn.disabled = false;
+    if (!result.ok) {
+      if (msg) msg.textContent = result.error ?? 'Hodnotenie zlyhalo.';
+      return;
+    }
+    await refresh();
+  });
 }
 
 function readField(form: HTMLFormElement, name: string): string {
@@ -194,6 +301,29 @@ function bindForms(): void {
           })
           .join('') +
         '</ul>';
+    });
+  }
+
+  // Post-submission review: load the AI evaluation (1–5) + confirm/adjust.
+  for (const rbtn of Array.from(containerRef.querySelectorAll<HTMLButtonElement>('button[data-review-btn]'))) {
+    rbtn.addEventListener('click', async () => {
+      const qid = rbtn.getAttribute('data-review-btn');
+      const sid = rbtn.getAttribute('data-submission');
+      const slot = qid ? containerRef!.querySelector<HTMLElement>(`[data-review-slot="${qid}"]`) : null;
+      if (!qid || !sid || !slot || slot.dataset.loaded === '1') return;
+      rbtn.disabled = true;
+      const original = rbtn.textContent;
+      rbtn.textContent = 'Načítavam…';
+      const { evaluation, review } = await fetchSubmissionReview(sid);
+      rbtn.disabled = false;
+      rbtn.textContent = original;
+      if (!evaluation) {
+        slot.innerHTML = '<p class="muted">Hodnotenie AI sa nepodarilo načítať.</p>';
+        return;
+      }
+      slot.dataset.loaded = '1';
+      slot.innerHTML = renderSubmissionEval(evaluation) + (review ? renderExistingReview(review) : renderReviewForm(qid, sid, evaluation));
+      if (!review) bindReviewForm(qid);
     });
   }
 

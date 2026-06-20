@@ -36,9 +36,42 @@ export interface TeacherQuestRow {
   proposedDeadline: string | null;
   approvedDeadline: string | null;
   teacherFeedback: string | null;
+  submissionId: string | null;
   xpEstimate: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SubmissionEvaluation {
+  valid: boolean;
+  score: number;
+  confidence: number;
+  reasons: { criterion: string; result: string; explanation: string }[];
+  detectedCompetencies: { id: string; strength: number }[];
+  model: string;
+}
+
+export interface ExistingSubmissionReview {
+  decision: string;
+  finalScore: number;
+  finalValid: boolean;
+  feedbackText: string | null;
+}
+
+/** Fetch a submission's AI evaluation + existing teacher review (for the final, post-submission review). */
+export async function fetchSubmissionReview(
+  submissionId: string,
+): Promise<{ evaluation: SubmissionEvaluation | null; review: ExistingSubmissionReview | null }> {
+  try {
+    const res = await fetch(`/api/submissions/${encodeURIComponent(submissionId)}`, { headers: await authHeaders() });
+    const data = (await res.json().catch(() => null)) as
+      | { submission?: { evaluation?: SubmissionEvaluation | null }; review?: ExistingSubmissionReview | null }
+      | null;
+    if (!res.ok || !data) return { evaluation: null, review: null };
+    return { evaluation: data.submission?.evaluation ?? null, review: data.review ?? null };
+  } catch {
+    return { evaluation: null, review: null };
+  }
 }
 
 export type ApprovalDecision = 'approve' | 'request_changes' | 'reject';
