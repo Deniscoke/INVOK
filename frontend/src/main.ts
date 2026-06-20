@@ -5,6 +5,7 @@ import './styles/boot.css';
 import './styles/certificate.css';
 import './styles/questionnaire.css';
 import './styles/portfolio.css';
+import './styles/parent-report.css';
 import './styles/smarta.css';
 import { mountBootLoader } from './components/BootLoader';
 import { LandingPage } from './pages/LandingPage';

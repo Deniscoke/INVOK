@@ -16,6 +16,7 @@ import { listQuests, type StudentQuest } from '../services/questStore';
 import { competencyName, strengthToLevel, levelLabel } from '../services/competencyScale';
 import { openCertificate } from '../components/Certificate';
 import { openPortfolio } from '../components/Portfolio';
+import { openParentReport } from '../components/ParentReport';
 import { computeModuleBadges, earnedBadgeCount } from '../services/moduleBadges';
 import { openQuestionnaire } from '../components/Questionnaire';
 import { fetchMyQuestionnaires } from '../services/questionnaireApi';
@@ -89,6 +90,7 @@ function realStudentEmptyState(alias: string): string {
 
 function profileCard(alias: string, certUnlocked: boolean): string {
   const portfolioBtn = `<button type="button" class="btn btn--ghost btn--sm" data-portfolio-btn>${'\u{1F5C2}\u{FE0F}'} Portfólio</button>`;
+  const parentBtn = `<button type="button" class="btn btn--ghost btn--sm" data-parent-btn>${'\u{1F4C4}'} Rodičom</button>`;
   const certBtn = certUnlocked
     ? `<button type="button" class="btn btn--ghost btn--sm" data-cert-btn>${'\u{1F393}'} Certifikát</button>`
     : `<button type="button" class="btn btn--ghost btn--sm" disabled title="Odomkne sa po vyplnení záverečného dotazníka" style="opacity:.55">${'\u{1F512}'} Certifikát</button>`;
@@ -100,7 +102,7 @@ function profileCard(alias: string, certUnlocked: boolean): string {
         <div class="muted">Pseudonymný žiak</div>
         <div class="identity__alias">${escapeHtml(alias)}</div>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${portfolioBtn}${certBtn}</div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${portfolioBtn}${parentBtn}${certBtn}</div>
     </div>
   </section>`;
 }
@@ -241,6 +243,7 @@ async function loadJourney(alias: string): Promise<void> {
   };
   slot.querySelector<HTMLButtonElement>('[data-cert-btn]')?.addEventListener('click', () => openCertificate({ alias }));
   slot.querySelector<HTMLButtonElement>('[data-portfolio-btn]')?.addEventListener('click', () => void openPortfolio({ alias }));
+  slot.querySelector<HTMLButtonElement>('[data-parent-btn]')?.addEventListener('click', () => void openParentReport({ alias }));
   slot
     .querySelector<HTMLButtonElement>('[data-q-input]')
     ?.addEventListener('click', () => openQuestionnaire({ phase: 'input', onDone: reload }));
