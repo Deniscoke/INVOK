@@ -113,8 +113,12 @@ function render(): void {
   app.innerHTML = `${header(route.path)}<main><div class="container">${route.render()}</div></main>${footer()}`;
   window.scrollTo({ top: 0 });
 
-  document.querySelector('#auth-signout')?.addEventListener('click', () => {
-    void signOut();
+  document.querySelector('#auth-signout')?.addEventListener('click', async () => {
+    await signOut();
+    // Land on the home page after signing out instead of staying on a now
+    // role-less dashboard (which would show demo data).
+    if (currentPath() === '/') render();
+    else window.location.hash = '/';
   });
   route.mount?.();
 }
