@@ -20,6 +20,7 @@ import { validateSubmissionWithAI, type AIValidationResult, type AIValidationCon
 import { scoreProblemProposal } from './problemProposalService.js';
 import { getMissionById } from './missionService.js';
 import { levelForXp } from './progressService.js';
+import { sumQuestionnaireXp } from './questionnaireService.js';
 import { getServerEnv, missingServerSecrets } from '../lib/env.js';
 import {
   loadQuestForStudent,
@@ -532,6 +533,8 @@ async function dbGetSessionProgress(accessCodeId: string): Promise<{
         }
       }
     }
+    // Fold in XP earned from the input/output self-assessment questionnaires.
+    totalXp += await sumQuestionnaireXp(accessCodeId);
     const competencyProgress = Object.entries(comp).map(([competencyId, v]) => ({
       competencyId,
       xp: Math.round(v.xp),

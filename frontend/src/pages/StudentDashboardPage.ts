@@ -15,7 +15,9 @@ import { fetchMyProgress, type SubmissionResult } from '../services/submissionAp
 import { listQuests, type StudentQuest } from '../services/questStore';
 import { competencyName, strengthToLevel, levelLabel } from '../services/competencyScale';
 import { openCertificate } from '../components/Certificate';
-import { computeModuleBadges } from '../services/moduleBadges';
+import { computeModuleBadges, earnedBadgeCount } from '../services/moduleBadges';
+import { openQuestionnaire } from '../components/Questionnaire';
+import { fetchMyQuestionnaires } from '../services/questionnaireApi';
 
 let pendingMount: (() => void) | null = null;
 
@@ -84,7 +86,10 @@ function realStudentEmptyState(alias: string): string {
   </section>`;
 }
 
-function profileCard(alias: string): string {
+function profileCard(alias: string, certUnlocked: boolean): string {
+  const certBtn = certUnlocked
+    ? `<button type="button" class="btn btn--ghost btn--sm" data-cert-btn style="margin-left:auto">${'\u{1F393}'} Certifikát</button>`
+    : `<button type="button" class="btn btn--ghost btn--sm" disabled title="Odomkne sa po vyplnení záverečného dotazníka" style="margin-left:auto;opacity:.55">${'\u{1F512}'} Certifikát</button>`;
   return `
   <section class="card">
     <div class="identity">
@@ -93,9 +98,43 @@ function profileCard(alias: string): string {
         <div class="muted">Pseudonymný žiak</div>
         <div class="identity__alias">${escapeHtml(alias)}</div>
       </div>
-      <button type="button" class="btn btn--ghost btn--sm" data-cert-btn style="margin-left:auto">${'\u{1F393}'} Certifikát</button>
+      ${certBtn}
     </div>
   </section>`;
+}
+
+/** Start/finish questionnaire tiles — input is always open; output unlocks after
+ *  all 4 badges; completing output then unlocks the certificate. */
+function renderQuestionnaireSection(hasInput: boolean, hasOutput: boolean, badgesEarned: number): string {
+  const tile = (inner: string, locked = false): string =>
+    `<div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-3)${locked ? ';opacity:.6' : ''}">${inner}</div>`;
+
+  const inputTile = hasInput
+    ? tile(`<strong>${'\u{1F680}'} Štartový dotazník</strong><div style="margin-top:8px"><span class="chip chip--accent">hotový ✓</span></div>`)
+    : tile(`<strong>${'\u{1F680}'} Štartový dotazník</strong>
+        <p class="muted" style="font-size:var(--fs-xs);margin:6px 0 10px">Spoznaj sa na začiatku cesty.</p>
+        <button type="button" class="btn btn--primary btn--sm" data-q-input>Vyplniť (+50 XP)</button>`);
+
+  let outputTile: string;
+  if (hasOutput) {
+    outputTile = tile(`<strong>${'\u{1F3C6}'} Záverečný dotazník</strong><div style="margin-top:8px"><span class="chip chip--accent">hotový ✓</span></div>`);
+  } else if (badgesEarned >= 4) {
+    outputTile = tile(`<strong>${'\u{1F3C6}'} Záverečný dotazník</strong>
+        <p class="muted" style="font-size:var(--fs-xs);margin:6px 0 10px">Odomknuté — ukáž svoj rast!</p>
+        <button type="button" class="btn btn--primary btn--sm" data-q-output>Vyplniť (+80 XP)</button>`);
+  } else {
+    outputTile = tile(
+      `<strong>${'\u{1F512}'} Záverečný dotazník</strong>
+        <p class="muted" style="font-size:var(--fs-xs);margin:6px 0 0">Odomkne sa po získaní všetkých 4 odznakov (máš ${badgesEarned}/4).</p>`,
+      true,
+    );
+  }
+
+  return `<div class="card">
+    <div class="card-title"><h3 style="margin:0">${'\u{1F4CB}'} Dotazníky</h3></div>
+    <p class="muted" style="margin:6px 0 var(--space-3)">Na štarte aj na konci programu vyplníš krátky dotazník (6 oblastí). Porovnáme ich a uvidíš svoj rast.</p>
+    <div class="grid grid--2" style="gap:var(--space-3)">${inputTile}${outputTile}</div>
+  </div>`;
 }
 
 const JOURNEY_STATE_LABEL: Record<string, { label: string; cls: string }> = {
@@ -164,28 +203,47 @@ function renderMyMissions(quests: StudentQuest[]): string {
 async function loadJourney(alias: string): Promise<void> {
   const slot = document.querySelector<HTMLElement>('#journey-slot');
   if (!slot) return;
-  const [progress, quests] = await Promise.all([fetchMyProgress(), listQuests()]);
+  const [progress, quests, questionnaires] = await Promise.all([
+    fetchMyProgress(),
+    listQuests(),
+    fetchMyQuestionnaires(),
+  ]);
+  const hasInput = questionnaires.some((q) => q.phase === 'input');
+  const hasOutput = questionnaires.some((q) => q.phase === 'output');
+  const badges = earnedBadgeCount(progress);
   const started = quests.filter((q) => q.state !== 'draft' && q.state !== 'rejected');
-  const hasAnything = progress.totalXp > 0 || progress.competencyProgress.length > 0 || started.length > 0;
-  if (!hasAnything) {
-    slot.innerHTML = realStudentEmptyState(alias);
-    return;
-  }
-  slot.innerHTML = `
-  ${profileCard(alias)}
-  <div class="grid grid--2" style="margin-top:var(--space-5);gap:var(--space-4)">
-    <div class="stack">
-      ${ProgressSummary(progress)}
-      ${renderCompetencyLevels(progress)}
-    </div>
-    <div class="stack">
-      ${renderMyMissions(quests)}
-    </div>
-  </div>
-  <div style="margin-top:var(--space-4)">${renderModuleBadges(progress)}</div>`;
+  const hasAnything =
+    progress.totalXp > 0 ||
+    progress.competencyProgress.length > 0 ||
+    started.length > 0 ||
+    questionnaires.length > 0;
+
+  const main = hasAnything
+    ? `${profileCard(alias, hasOutput)}
+      <div class="grid grid--2" style="margin-top:var(--space-5);gap:var(--space-4)">
+        <div class="stack">
+          ${ProgressSummary(progress)}
+          ${renderCompetencyLevels(progress)}
+        </div>
+        <div class="stack">
+          ${renderMyMissions(quests)}
+        </div>
+      </div>
+      <div style="margin-top:var(--space-4)">${renderModuleBadges(progress)}</div>`
+    : realStudentEmptyState(alias);
+
+  slot.innerHTML = `${main}<div style="margin-top:var(--space-4)">${renderQuestionnaireSection(hasInput, hasOutput, badges)}</div>`;
+
+  const reload = (): void => {
+    void loadJourney(alias);
+  };
+  slot.querySelector<HTMLButtonElement>('[data-cert-btn]')?.addEventListener('click', () => openCertificate({ alias }));
   slot
-    .querySelector<HTMLButtonElement>('[data-cert-btn]')
-    ?.addEventListener('click', () => openCertificate({ alias }));
+    .querySelector<HTMLButtonElement>('[data-q-input]')
+    ?.addEventListener('click', () => openQuestionnaire({ phase: 'input', onDone: reload }));
+  slot
+    .querySelector<HTMLButtonElement>('[data-q-output]')
+    ?.addEventListener('click', () => openQuestionnaire({ phase: 'output', onDone: reload }));
 }
 
 export function StudentDashboardPage(): string {

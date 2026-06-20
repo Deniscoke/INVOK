@@ -23,6 +23,7 @@ import {
   loadQuestForStudent,
 } from '../../backend/services/studentQuestService.js';
 import { generateQuest } from '../../backend/services/questGeneratorService.js';
+import { saveQuestionnaire, listMyQuestionnaires } from '../../backend/services/questionnaireService.js';
 import { routeSegments } from '../../backend/lib/routePath.js';
 import { createQuestUploadUrl, listQuestFiles, isAllowedAttachmentType, ATTACH_MAX_FILE_BYTES } from '../../backend/lib/storage.js';
 
@@ -114,6 +115,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
     res.status(200).json({ ok: true, ...signed });
+    return;
+  }
+
+  // /api/student/questionnaire — pseudonymous input/output competency self-assessment.
+  if (route === 'questionnaire') {
+    const token = bearerToken(req);
+    if (!token) {
+      res.status(401).json({ ok: false, error: 'Chýba študentský session token.' });
+      return;
+    }
+    if (req.method === 'POST') {
+      const result = await saveQuestionnaire(token, body.phase, body.answers, body.openAnswers);
+      res.status(result.ok ? 200 : (result.status ?? 500)).json(result);
+      return;
+    }
+    if (req.method === 'GET') {
+      const result = await listMyQuestionnaires(token);
+      res.status(result.ok ? 200 : (result.status ?? 500)).json(result);
+      return;
+    }
+    res.setHeader('Allow', 'GET, POST');
+    res.status(405).json({ error: 'Method Not Allowed' });
     return;
   }
 
