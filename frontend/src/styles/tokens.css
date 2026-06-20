@@ -3,35 +3,35 @@
    Playful but not infantile: warm accents, calm surfaces, strong contrast.
    ============================================================================ */
 :root {
-  /* Color – surfaces */
-  --color-bg: #f5f6fb;
+  /* Color – surfaces (warm, pale "Monax" neutrals) */
+  --color-bg: #efede8;
   --color-surface: #ffffff;
-  --color-surface-2: #f0f1f9;
-  --color-border: #e3e5f0;
+  --color-surface-2: #e9e5db;
+  --color-border: #dcd7c9;
 
   /* Color – text */
-  --color-text: #1f2540;
-  --color-muted: #5b6178;
+  --color-text: #0d0d10;
+  --color-muted: #84817a;
   --color-on-primary: #ffffff;
 
-  /* Color – brand */
-  --color-primary: #5b5ef0;
-  --color-primary-strong: #4244d6;
-  --color-accent: #14b8a6;
-  --color-warm: #ff9f45;
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
+  /* Color – brand (playful violet + signature sage green, warm coral/amber) */
+  --color-primary: #7c5cd6;
+  --color-primary-strong: #5e3da0;
+  --color-accent: #6f9c33;
+  --color-warm: #e6884f;
+  --color-success: #5c9a2e;
+  --color-danger: #cf3340;
 
   /* Soft tints (chips, backgrounds) */
-  --tint-primary: #ecedfe;
-  --tint-accent: #d9f5f0;
-  --tint-warm: #ffeede;
-  --tint-success: #dcfce7;
-  --tint-danger: #fee2e2;
+  --tint-primary: #ece6f9;
+  --tint-accent: #e6efd3;
+  --tint-warm: #fbe6d6;
+  --tint-success: #e4f0d2;
+  --tint-danger: #fbe0e1;
 
   /* Gradients */
-  --gradient-hero: linear-gradient(135deg, #5b5ef0 0%, #7c5cf0 45%, #14b8a6 120%);
-  --gradient-xp: linear-gradient(90deg, #ff9f45 0%, #ff7a59 100%);
+  --gradient-hero: linear-gradient(135deg, #7c5cd6 0%, #b15ec0 38%, #e36a4d 72%, #ffb04b 120%);
+  --gradient-xp: linear-gradient(90deg, #ffb04b 0%, #e36a4d 100%);
 
   /* Typography */
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -62,12 +62,12 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(31, 37, 64, 0.06);
-  --shadow-md: 0 6px 20px rgba(31, 37, 64, 0.08);
-  --shadow-lg: 0 18px 40px rgba(31, 37, 64, 0.12);
+  /* Shadows (warm-tinted, soft "Monax" depth) */
+  --shadow-sm: 0 1px 2px rgba(60, 45, 20, 0.06);
+  --shadow-md: 0 8px 24px rgba(60, 45, 20, 0.10);
+  --shadow-lg: 0 22px 48px rgba(60, 45, 20, 0.16);
 
   /* Layout */
   --container: 1120px;
-  --focus-ring: 0 0 0 3px rgba(91, 94, 240, 0.45);
+  --focus-ring: 0 0 0 3px rgba(124, 92, 214, 0.42);
 }

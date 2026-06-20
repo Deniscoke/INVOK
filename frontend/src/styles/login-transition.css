@@ -24,12 +24,13 @@
   animation: invok-curtain 1200ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
 }
 
-.invok-login-transition span:nth-child(1) { left: 0;             background: #E73334; animation-delay: 0ms;   }
-.invok-login-transition span:nth-child(2) { left: calc(100% / 6); background: #F19EAC; animation-delay: 40ms;  }
-.invok-login-transition span:nth-child(3) { left: calc(200% / 6); background: #F9D94C; animation-delay: 80ms;  }
-.invok-login-transition span:nth-child(4) { left: calc(300% / 6); background: #49A372; animation-delay: 120ms; }
-.invok-login-transition span:nth-child(5) { left: calc(400% / 6); background: #2D38D1; animation-delay: 160ms; }
-.invok-login-transition span:nth-child(6) { left: calc(500% / 6); background: #6325C6; animation-delay: 200ms; }
+/* Colors echo the Monax spheres: violet · coral · amber · sage · sky · red. */
+.invok-login-transition span:nth-child(1) { left: 0;             background: #7c5cd6; animation-delay: 0ms;   }
+.invok-login-transition span:nth-child(2) { left: calc(100% / 6); background: #e36a4d; animation-delay: 40ms;  }
+.invok-login-transition span:nth-child(3) { left: calc(200% / 6); background: #ffb04b; animation-delay: 80ms;  }
+.invok-login-transition span:nth-child(4) { left: calc(300% / 6); background: #7da93f; animation-delay: 120ms; }
+.invok-login-transition span:nth-child(5) { left: calc(400% / 6); background: #7bafce; animation-delay: 160ms; }
+.invok-login-transition span:nth-child(6) { left: calc(500% / 6); background: #cf3340; animation-delay: 200ms; }
 
 @keyframes invok-curtain {
   0%   { transform: translateY(102%); } /* below screen */

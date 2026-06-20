@@ -1,5 +1,6 @@
 import { signInTeacher, signInWithMagicLink, signUpTeacher } from '../services/authService';
 import { isSupabaseConfigured } from '../services/supabaseClient';
+import { playLoginTransition } from '../components/LoginTransition';
 
 export function LoginPage(): string {
   return `
@@ -76,7 +77,13 @@ export function mountLoginPage(): void {
     const password = (document.querySelector('#login-password') as HTMLInputElement | null)?.value ?? '';
     const result = await signInTeacher(email, password);
     if (loginMsg) loginMsg.textContent = result.ok ? (result.info ?? 'Prihlásený.') : (result.error ?? 'Prihlásenie zlyhalo.');
-    if (result.ok) window.location.hash = '/teacher';
+    if (result.ok) {
+      // Same colored curtain as the student join — covers, switches behind it,
+      // then sweeps off to reveal the teacher dashboard.
+      await playLoginTransition(() => {
+        window.location.hash = '/teacher';
+      });
+    }
   });
 
   registerForm?.addEventListener('submit', async (event) => {

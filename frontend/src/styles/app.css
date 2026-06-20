@@ -13,7 +13,22 @@ body {
   font-size: var(--fs-md);
   line-height: var(--lh-base);
   color: var(--color-text);
-  background: var(--color-bg);
+  background:
+    radial-gradient(120% 70% at 50% 0%, #f4f1ec 0%, #eae7df 55%, #e2ddd0 100%) fixed,
+    var(--color-bg);
+  min-height: 100vh;
+}
+
+/* Faint film grain — the warm "Monax" texture, never blocks input. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 
 h1, h2, h3, h4 { line-height: var(--lh-tight); margin: 0 0 var(--space-3); }
@@ -82,7 +97,7 @@ main { padding: var(--space-6) 0 var(--space-8); }
 
 /* Chips ------------------------------------------------------------------- */
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 600; padding: 4px 10px; border-radius: var(--radius-pill); background: var(--tint-primary); color: var(--color-primary-strong); }
-.chip--accent { background: var(--tint-accent); color: #0f766e; }
+.chip--accent { background: var(--tint-accent); color: #46691f; }
 .chip--warm { background: var(--tint-warm); color: #b45309; }
 .chip--muted { background: var(--color-surface-2); color: var(--color-muted); }
 .chip-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
@@ -131,7 +146,7 @@ main { padding: var(--space-6) 0 var(--space-8); }
 /* Mission / competency / badge cards ------------------------------------- */
 .card-title { display: flex; align-items: center; gap: var(--space-2); justify-content: space-between; }
 .card-title h3 { margin: 0; font-size: var(--fs-lg); }
-.card-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--tint-accent); color: #0f766e; flex: 0 0 auto; }
+.card-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--tint-accent); color: #46691f; flex: 0 0 auto; }
 .mission__meta { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); align-items: center; }
 .mission__goal { background: var(--color-surface-2); border-radius: var(--radius-md); padding: var(--space-3); font-size: var(--fs-sm); }
 .xp-pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: #b45309; background: var(--tint-warm); padding: 4px 12px; border-radius: var(--radius-pill); }
@@ -139,7 +154,7 @@ main { padding: var(--space-6) 0 var(--space-8); }
 .competency { display: flex; gap: var(--space-3); }
 .competency__body { min-width: 0; }
 .teacher-hint { margin-top: var(--space-3); padding: var(--space-3); border-left: 3px solid var(--color-accent); background: var(--tint-accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: var(--fs-sm); }
-.teacher-hint__label { font-weight: 700; color: #0f766e; text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--fs-xs); }
+.teacher-hint__label { font-weight: 700; color: #46691f; text-transform: uppercase; letter-spacing: 0.04em; font-size: var(--fs-xs); }
 
 .badge-card { text-align: center; }
 .badge-card__icon { width: 56px; height: 56px; margin: 0 auto var(--space-3); border-radius: var(--radius-pill); display: grid; place-items: center; background: var(--tint-primary); color: var(--color-primary-strong); }

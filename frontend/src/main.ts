@@ -1,7 +1,9 @@
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/login-transition.css';
+import './styles/boot.css';
 import './styles/smarta.css';
+import { mountBootLoader } from './components/BootLoader';
 import { LandingPage } from './pages/LandingPage';
 import { StudentDashboardPage, mountStudentDashboard } from './pages/StudentDashboardPage';
 import { StudentQuestsPage, mountStudentQuestsPage } from './pages/StudentQuestsPage';
@@ -125,6 +127,9 @@ function render(): void {
   });
   route.mount?.();
 }
+
+// Epic entrance splash (once per page load), shown over the first render.
+mountBootLoader();
 
 onAuthChange(render);
 window.addEventListener('hashchange', render);
