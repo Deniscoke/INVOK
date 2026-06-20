@@ -18,6 +18,13 @@ export interface ServerEnv {
   /** Model for AI quest generation. Independent of the validation model so a
    *  slow flagship (e.g. gpt-5.5) set for scoring can't time out quest drafts. */
   openaiQuestModel: string;
+  /** Chat model for the Smarta assistant. */
+  smartaChatModel: string;
+  /** OpenAI text-to-speech model (used when ElevenLabs isn't configured). */
+  openaiTtsModel: string;
+  /** Optional ElevenLabs provider (preferred for TTS when both are set). */
+  elevenLabsApiKey: string | undefined;
+  elevenLabsVoiceId: string | undefined;
   openaiValidationProvider: AIValidationProvider;
   openaiValidationTimeoutMs: number;
   openaiValidationLogRawPrompts: boolean;
@@ -56,6 +63,10 @@ export function getServerEnv(): ServerEnv {
     // Quest generation defaults to a fast model even if OPENAI_VALIDATION_MODEL
     // is a slow flagship — otherwise the draft call times out → silent mock.
     openaiQuestModel: env.OPENAI_QUEST_MODEL ?? 'gpt-4.1-mini',
+    smartaChatModel: env.OPENAI_MODEL ?? 'gpt-4.1-mini',
+    openaiTtsModel: env.OPENAI_TTS_MODEL ?? 'gpt-4o-mini-tts',
+    elevenLabsApiKey: env.ELEVENLABS_API_KEY,
+    elevenLabsVoiceId: env.ELEVENLABS_VOICE_ID,
     openaiValidationProvider: env.OPENAI_VALIDATION_PROVIDER === 'openai' ? 'openai' : 'mock',
     openaiValidationTimeoutMs: positiveInt(env.OPENAI_VALIDATION_TIMEOUT_MS, 15_000),
     openaiValidationLogRawPrompts: env.OPENAI_VALIDATION_LOG_RAW_PROMPTS === 'true',

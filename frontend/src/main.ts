@@ -1,6 +1,7 @@
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/login-transition.css';
+import './styles/smarta.css';
 import { LandingPage } from './pages/LandingPage';
 import { StudentDashboardPage, mountStudentDashboard } from './pages/StudentDashboardPage';
 import { StudentQuestsPage, mountStudentQuestsPage } from './pages/StudentQuestsPage';
@@ -9,6 +10,7 @@ import { LoginPage, mountLoginPage } from './pages/LoginPage';
 import { StudentJoinPage, mountStudentJoinPage } from './pages/StudentJoinPage';
 import { PilotSetupPage, mountPilotSetup } from './pages/PilotSetupPage';
 import { AuthStatus } from './components/AuthStatus';
+import { mountSmarta } from './components/smarta/Smarta';
 import { getSnapshot, init as initAuth, onAuthChange, signOut } from './services/authService';
 
 interface Route {
@@ -128,4 +130,6 @@ onAuthChange(render);
 window.addEventListener('hashchange', render);
 normalizeUrlToHash();
 render();
+// Global assistant — mounted once on <body>, survives #app re-renders.
+mountSmarta();
 void initAuth();

@@ -1,0 +1,230 @@
+/* Smarta — global floating assistant. Self-contained; brand purple with token
+   fallbacks so it works regardless of the rest of the design system. */
+.smarta-root {
+  --smarta-accent: var(--color-accent, #6C5CE7);
+  --smarta-bg: #ffffff;
+  --smarta-radius: 18px;
+  position: fixed;
+  z-index: 9000;
+}
+
+/* Floating button */
+.smarta-fab {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--smarta-accent);
+  box-shadow: 0 8px 24px rgba(108, 92, 231, 0.4);
+  display: grid;
+  place-items: center;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.smarta-fab:hover { transform: translateY(-2px) scale(1.04); }
+.smarta-fab:active { transform: scale(0.97); }
+.smarta-fab__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  display: block;
+}
+
+/* Panel */
+.smarta-panel {
+  position: fixed;
+  right: 22px;
+  bottom: 94px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 520px;
+  max-height: calc(100vh - 130px);
+  background: var(--smarta-bg);
+  border-radius: var(--smarta-radius);
+  box-shadow: 0 18px 48px rgba(20, 20, 60, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+  transform-origin: bottom right;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.smarta-panel--open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Header */
+.smarta-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--smarta-accent), #8b7bff);
+  color: #fff;
+}
+.smarta-panel__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  flex: 0 0 auto;
+}
+.smarta-panel__title { display: flex; flex-direction: column; line-height: 1.15; margin-right: auto; }
+.smarta-panel__title strong { font-size: 15px; }
+.smarta-panel__title span { font-size: 11px; opacity: 0.85; }
+
+.smarta-icon-btn {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease;
+}
+.smarta-icon-btn:hover { background: rgba(255, 255, 255, 0.32); }
+.smarta-icon-btn--disabled { opacity: 0.45; cursor: not-allowed; }
+.smarta-icon-btn--active { background: #ff5d73; }
+
+/* Messages */
+.smarta-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f6f6fb;
+}
+.smarta-msg { display: flex; }
+.smarta-msg--user { justify-content: flex-end; }
+.smarta-msg--bot { justify-content: flex-start; }
+.smarta-bubble {
+  position: relative;
+  max-width: 80%;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.smarta-msg--user .smarta-bubble {
+  background: var(--smarta-accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.smarta-msg--bot .smarta-bubble {
+  background: #fff;
+  color: #20203a;
+  border: 1px solid #e7e7f1;
+  border-bottom-left-radius: 4px;
+  padding-right: 30px;
+}
+.smarta-copy {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  background: transparent;
+  border: none;
+  color: #9a9ab0;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 0;
+  border-radius: 5px;
+}
+.smarta-copy:hover { color: var(--smarta-accent); background: #f0f0f8; }
+.smarta-copy--done { color: #16a34a; }
+
+/* Typing indicator */
+.smarta-typing { display: inline-flex; gap: 4px; align-items: center; }
+.smarta-typing span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #b9b9cf; display: inline-block;
+  animation: smarta-bounce 1.2s infinite ease-in-out;
+}
+.smarta-typing span:nth-child(2) { animation-delay: 0.15s; }
+.smarta-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes smarta-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Input */
+.smarta-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid #ececf3;
+  background: #fff;
+}
+.smarta-input .smarta-icon-btn { background: #f0f0f8; color: #5b5b73; }
+.smarta-input .smarta-icon-btn:hover { background: #e6e6f2; }
+.smarta-input .smarta-icon-btn--active { background: #ff5d73; color: #fff; }
+.smarta-text {
+  flex: 1 1 auto;
+  resize: none;
+  border: 1px solid #e0e0ec;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  max-height: 120px;
+  outline: none;
+}
+.smarta-text:focus { border-color: var(--smarta-accent); }
+.smarta-send {
+  flex: 0 0 auto;
+  width: 38px; height: 38px;
+  border: none; border-radius: 11px;
+  background: var(--smarta-accent);
+  color: #fff; font-size: 15px; cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.smarta-send:hover { filter: brightness(1.08); }
+
+/* Avatar */
+.smarta-avatar { width: 100%; height: 100%; display: block; position: relative; }
+.smarta-avatar svg { width: 100%; height: 100%; display: block; }
+.smarta-avatar--png .smarta-avatar__base,
+.smarta-avatar--png .smarta-avatar__mouth-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+}
+.smarta-avatar--speaking { animation: smarta-bob 0.9s ease-in-out infinite; }
+@keyframes smarta-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Mobile: panel takes most of the screen */
+@media (max-width: 480px) {
+  .smarta-panel {
+    right: 8px; left: 8px;
+    bottom: 84px;
+    width: auto;
+    height: calc(100vh - 110px);
+  }
+  .smarta-fab { right: 16px; bottom: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smarta-avatar--speaking { animation: none; }
+  .smarta-panel { transition: opacity 0.15s ease; transform: none; }
+}

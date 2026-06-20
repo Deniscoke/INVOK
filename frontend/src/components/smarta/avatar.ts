@@ -1,0 +1,90 @@
+/**
+ * Smarta's 2D avatar.
+ *
+ * MVP renders an inline SVG anime-style head/shoulders with a mouth element that
+ * the lip-sync engine opens/closes via `setMouthOpen(0..1)`. The avatar is kept
+ * behind a small abstraction so it can later be swapped for PNG layers, visemes
+ * or a Live2D model WITHOUT touching the chat / TTS / lip-sync code.
+ *
+ * To use your own PNGs instead of the SVG:
+ *   1. Drop the files in `public/smarta/` (avatar_base.png, mouth_closed.png,
+ *      mouth_open.png) — see public/smarta/README.md.
+ *   2. Set AVATAR_MODE = 'png' below.
+ * In PNG mode `setMouthOpen` swaps mouth_closed ⇄ mouth_open at a threshold.
+ */
+const AVATAR_MODE: 'svg' | 'png' = 'svg';
+
+export interface SmartaAvatar {
+  /** Root element to insert into the DOM. */
+  el: HTMLElement;
+  /** 0 = closed, 1 = fully open. Called every animation frame during speech. */
+  setMouthOpen: (amount: number) => void;
+  /** Toggles the speaking state (idle bob / glow); also resets the mouth. */
+  setSpeaking: (speaking: boolean) => void;
+}
+
+const FACE_SVG = `
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M14 120 Q60 84 106 120 Z" fill="#6C5CE7"/>
+  <rect x="52" y="72" width="16" height="16" rx="6" fill="#FBE0CC"/>
+  <circle cx="60" cy="52" r="38" fill="#3A2E66"/>
+  <ellipse cx="60" cy="56" rx="30" ry="32" fill="#FBE0CC"/>
+  <path d="M30 50 Q40 22 60 21 Q80 22 90 50 Q78 35 60 35 Q42 35 30 50 Z" fill="#4A3A82"/>
+  <ellipse cx="48" cy="58" rx="6.5" ry="8" fill="#fff"/>
+  <ellipse cx="72" cy="58" rx="6.5" ry="8" fill="#fff"/>
+  <circle cx="48" cy="60" r="4.2" fill="#2D2A45"/>
+  <circle cx="72" cy="60" r="4.2" fill="#2D2A45"/>
+  <circle cx="49.6" cy="58.4" r="1.4" fill="#fff"/>
+  <circle cx="73.6" cy="58.4" r="1.4" fill="#fff"/>
+  <circle cx="39" cy="68" r="4" fill="#F6B6C6" opacity=".7"/>
+  <circle cx="81" cy="68" r="4" fill="#F6B6C6" opacity=".7"/>
+  <ellipse class="smarta-avatar__mouth" cx="60" cy="74" rx="5" ry="1.2" fill="#B5455F"/>
+</svg>`;
+
+function createSvgAvatar(): SmartaAvatar {
+  const el = document.createElement('div');
+  el.className = 'smarta-avatar';
+  el.innerHTML = FACE_SVG;
+  const mouth = el.querySelector<SVGEllipseElement>('.smarta-avatar__mouth');
+  return {
+    el,
+    setMouthOpen(amount: number): void {
+      if (!mouth) return;
+      const v = Math.max(0, Math.min(1, amount));
+      mouth.setAttribute('ry', (0.8 + v * 6).toFixed(2));
+    },
+    setSpeaking(speaking: boolean): void {
+      el.classList.toggle('smarta-avatar--speaking', speaking);
+      if (!speaking && mouth) mouth.setAttribute('ry', '1.2');
+    },
+  };
+}
+
+function createPngAvatar(): SmartaAvatar {
+  const el = document.createElement('div');
+  el.className = 'smarta-avatar smarta-avatar--png';
+  el.innerHTML = `
+    <img class="smarta-avatar__base" src="/smarta/avatar_base.png" alt="Smarta">
+    <img class="smarta-avatar__mouth-img" src="/smarta/mouth_closed.png" alt="" data-closed="/smarta/mouth_closed.png" data-open="/smarta/mouth_open.png">`;
+  const mouthImg = el.querySelector<HTMLImageElement>('.smarta-avatar__mouth-img');
+  let openState = false;
+  const setMouthOpen = (amount: number): void => {
+    if (!mouthImg) return;
+    const shouldOpen = amount > 0.18;
+    if (shouldOpen === openState) return;
+    openState = shouldOpen;
+    mouthImg.src = shouldOpen ? mouthImg.dataset.open ?? '' : mouthImg.dataset.closed ?? '';
+  };
+  return {
+    el,
+    setMouthOpen,
+    setSpeaking(speaking: boolean): void {
+      el.classList.toggle('smarta-avatar--speaking', speaking);
+      if (!speaking) setMouthOpen(0);
+    },
+  };
+}
+
+export function createAvatar(): SmartaAvatar {
+  return AVATAR_MODE === 'png' ? createPngAvatar() : createSvgAvatar();
+}
