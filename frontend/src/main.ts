@@ -15,17 +15,16 @@ interface Route {
   label: string;
   render: () => string;
   mount?: () => void;
-  inNav?: boolean;
 }
 
 const routes: Route[] = [
-  { path: '/', label: 'Domov', render: LandingPage, inNav: true },
-  { path: '/student', label: 'Žiak', render: StudentDashboardPage, mount: mountStudentDashboard, inNav: true },
+  { path: '/', label: 'Domov', render: LandingPage },
+  { path: '/student', label: 'Žiak', render: StudentDashboardPage, mount: mountStudentDashboard },
   { path: '/quests', label: 'Misie', render: StudentQuestsPage, mount: mountStudentQuestsPage },
-  { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, mount: mountTeacherDashboard, inNav: true },
+  { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, mount: mountTeacherDashboard },
   { path: '/login', label: 'Prihlásenie', render: LoginPage, mount: mountLoginPage },
   { path: '/join', label: 'Pripojiť sa', render: StudentJoinPage, mount: mountStudentJoinPage },
-  { path: '/pilot', label: 'Pilot', render: PilotSetupPage, mount: mountPilotSetup, inNav: true },
+  { path: '/pilot', label: 'Pilot', render: PilotSetupPage, mount: mountPilotSetup },
 ];
 
 function currentPath(): string {
@@ -49,12 +48,40 @@ function normalizeUrlToHash(): void {
   window.history.replaceState(null, '', target);
 }
 
+interface NavItem {
+  path: string;
+  label: string;
+}
+
+/**
+ * Role-based navigation. Sections appear only once the relevant person is
+ * signed in, so a logged-out visitor sees a clean bar (just the two role
+ * buttons in AuthStatus). Labels are short and friendly rather than
+ * "Žiak"/"Učiteľ". Pilot setup is teacher-only.
+ */
+function navItemsFor(snapshot: ReturnType<typeof getSnapshot>): NavItem[] {
+  const role = snapshot.user?.role;
+  if (role === 'student') {
+    return [
+      { path: '/student', label: 'Moja cesta' },
+      { path: '/quests', label: 'Misie' },
+    ];
+  }
+  if (role === 'teacher' || role === 'admin') {
+    return [
+      { path: '/teacher', label: 'Moja trieda' },
+      { path: '/pilot', label: 'Žiaci a kódy' },
+    ];
+  }
+  return [];
+}
+
 function header(activePath: string): string {
-  const links = routes
-    .filter((route) => route.inNav)
+  const snapshot = getSnapshot();
+  const links = navItemsFor(snapshot)
     .map(
-      (route) =>
-        `<a class="nav__link" href="#${route.path}"${route.path === activePath ? ' aria-current="page"' : ''}>${route.label}</a>`,
+      (item) =>
+        `<a class="nav__link" href="#${item.path}"${item.path === activePath ? ' aria-current="page"' : ''}>${item.label}</a>`,
     )
     .join('');
   return `
@@ -63,7 +90,7 @@ function header(activePath: string): string {
       <a class="brand" href="#/"><span class="brand__mark">IN</span> INVOk</a>
       <div class="header-right">
         <nav class="nav" aria-label="Hlavná navigácia">${links}</nav>
-        ${AuthStatus(getSnapshot())}
+        ${AuthStatus(snapshot)}
       </div>
     </div>
   </header>`;
@@ -73,7 +100,7 @@ function footer(): string {
   return `
   <footer class="app-footer">
     <div class="container">
-      INVOk · MVP skelet · Pseudonymita a súkromie žiakov sú v základe dizajnu.
+      INVOk · Súkromie a pseudonymita žiakov sú v základe dizajnu.
     </div>
   </footer>`;
 }
