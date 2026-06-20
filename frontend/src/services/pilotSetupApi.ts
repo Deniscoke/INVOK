@@ -61,11 +61,20 @@ export async function createSchool(input: { schoolName: string; region?: string 
   try {
     return { ...(await post<EntityResult>('/api/admin/schools', input)), source: 'api' };
   } catch {
-    if (isSupabaseConfigured && !getSnapshot().user) {
-      return { ok: false, error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.', source: 'mock' };
+    // With Supabase configured we NEVER fake success — a fake school id would
+    // cascade into fake classes/codes that students can't actually join.
+    if (isSupabaseConfigured) {
+      return { ok: false, source: 'api', error: liveActionError() };
     }
     return { ok: true, id: 'demo-school', name: input.schoolName, source: 'mock' };
   }
+}
+
+/** Error shown when a real (Supabase) pilot action fails — never fake success. */
+function liveActionError(): string {
+  return getSnapshot().user
+    ? 'Akcia zlyhala. Skús znova — ak to pretrváva, odhlás sa a prihlás ako učiteľ.'
+    : 'Najprv sa prihlás ako učiteľ (tlačidlo „Som učiteľ").';
 }
 
 export async function createClass(input: { schoolId: string; className: string; grade?: number }): Promise<EntityResult> {
@@ -74,8 +83,8 @@ export async function createClass(input: { schoolId: string; className: string; 
     if (result.ok && result.id) rememberClass({ id: result.id, name: result.name ?? input.className });
     return result;
   } catch {
-    if (isSupabaseConfigured && !getSnapshot().user) {
-      return { ok: false, error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.', source: 'mock' };
+    if (isSupabaseConfigured) {
+      return { ok: false, source: 'api', error: liveActionError() };
     }
     const fallback: EntityResult = { ok: true, id: `demo-class-${Date.now()}`, name: input.className, source: 'mock' };
     // Even in the mock path remember the class locally so the dashboard can
@@ -93,8 +102,11 @@ export async function generateStudentCodes(input: { classId: string; count: numb
     if (result.codes) rememberStudentCodes(input.classId, result.codes);
     return result;
   } catch {
-    if (isSupabaseConfigured && !getSnapshot().user) {
-      return { ok: false, source: 'mock', error: 'Najprv sa prihlás alebo zaregistruj ako učiteľ.' };
+    // Critical: with Supabase configured, NEVER hand back fake local codes — a
+    // student could never join with them (they aren't in the DB) and would land
+    // in demo mode. Surface a real error instead.
+    if (isSupabaseConfigured) {
+      return { ok: false, source: 'api', error: liveActionError() };
     }
     const fallback: GenerateCodesResult = {
       ok: true,
