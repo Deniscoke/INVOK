@@ -107,11 +107,24 @@ function wireCodesForm(): void {
 }
 
 function wireCodesActions(codes: GeneratedCode[]): void {
-  document.querySelector('#codes-copy')?.addEventListener('click', () => {
+  document.querySelector('#codes-copy')?.addEventListener('click', (event) => {
+    event.preventDefault();
     const text = codes.map((c) => `${c.pseudonym}\t${c.code}`).join('\n');
-    void navigator.clipboard?.writeText(text);
+    void navigator.clipboard
+      ?.writeText(text)
+      .then(() => setMessage('#codes-msg', '✓ Kódy skopírované do schránky.'))
+      .catch(() => setMessage('#codes-msg', 'Kopírovanie zlyhalo — označ a skopíruj ručne.'));
   });
-  document.querySelector('#codes-print')?.addEventListener('click', () => window.print());
+  document.querySelector('#codes-print')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.print();
+  });
+  document.querySelector('#codes-more')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    const output = document.querySelector('#codes-output');
+    if (output) output.innerHTML = '';
+    document.querySelector('#codes-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 }
 
 async function refreshList(): Promise<void> {

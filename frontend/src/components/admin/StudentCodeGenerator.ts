@@ -47,5 +47,17 @@ export function renderGeneratedCodes(codes: GeneratedCode[]): string {
       (Prezývka + Kód). Po zadaní sa otvorí žiacky dashboard. <em>Test</em> v poslednom
       stĺpci otvorí pripojenie ako konkrétny žiak v novom tabe pre rýchlu kontrolu.
     </div>
+
+    <div class="card" style="margin-top:var(--space-4);border-left:4px solid var(--color-success);background:var(--tint-success, #ecfdf5)">
+      <strong style="color:#15803d">✓ Kódy sú vygenerované a uložené</strong>
+      <p class="muted" style="margin:6px 0 var(--space-3);font-size:var(--fs-sm)">
+        Najskôr si ich <strong>skopíruj alebo vytlač</strong> (plaintext sa zobrazí len teraz).
+        Keď ich máš, vytváranie môžeš dokončiť.
+      </p>
+      <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
+        <a class="btn btn--primary btn--sm" href="#/teacher">Dokončiť — prejsť na Moju triedu</a>
+        <button class="btn btn--ghost btn--sm" id="codes-more" type="button">Vygenerovať ďalšie kódy</button>
+      </div>
+    </div>
   </div>`;
 }

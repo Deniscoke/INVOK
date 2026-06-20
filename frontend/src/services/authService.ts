@@ -42,6 +42,13 @@ function emit(): void {
   for (const listener of listeners) listener();
 }
 
+/** True when two snapshots represent the same signed-in identity. */
+function sameUser(a: AuthUser | null, b: AuthUser | null): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return a.id === b.id && a.role === b.role && a.displayName === b.displayName;
+}
+
 export function onAuthChange(callback: () => void): () => void {
   listeners.add(callback);
   return () => listeners.delete(callback);
@@ -93,8 +100,14 @@ async function refreshFromSupabase(): Promise<void> {
 export async function init(): Promise<void> {
   if (isSupabaseConfigured && supabase) {
     await refreshFromSupabase();
+    // Supabase fires this on token refresh / tab focus too. Re-render only when
+    // the actual identity changes — otherwise an in-progress page (e.g. pilot
+    // setup with generated codes) would reset to the top on a background refresh.
     supabase.auth.onAuthStateChange(() => {
-      void refreshFromSupabase().then(emit);
+      const before = snapshot.user;
+      void refreshFromSupabase().then(() => {
+        if (!sameUser(before, snapshot.user)) emit();
+      });
     });
   } else {
     snapshot = { mode: 'demo', user: loadDemoUser() };
