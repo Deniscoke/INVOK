@@ -1,8 +1,8 @@
 /**
  * Frontend teacher API client for student-proposed quest approvals.
  *
- *   GET  /api/teacher/quests?classId=…   → list pending / changes_requested / approved
- *   POST /api/teacher/quests/review      → approve / request_changes / reject
+ *   GET  /api/teacher/quests?classId=…    → list pending / changes_requested / approved
+ *   POST /api/teacher/quests?action=review → approve / request_changes / reject
  *
  * Sends the teacher's Supabase JWT as a Bearer token (real accounts).
  * Falls back to a clean empty list when the API is unavailable, so the dashboard
@@ -86,7 +86,7 @@ export async function reviewQuestRequest(input: ReviewQuestInput): Promise<Revie
     return { ok: false, error: 'Supabase nie je nastavený — schvaľovanie misií je dostupné len v reálnom režime.' };
   }
   try {
-    const response = await fetch('/api/teacher/quests/review', {
+    const response = await fetch('/api/teacher/quests?action=review', {
       method: 'POST',
       headers: await authHeaders(),
       body: JSON.stringify(input),

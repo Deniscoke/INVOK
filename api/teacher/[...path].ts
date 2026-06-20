@@ -113,7 +113,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    if (sub === 'review' && req.method === 'POST') {
+    // Approve/reject. Path 'quests/review' OR (single-segment Vercel catch-all)
+    // 'quests?action=review'.
+    if ((sub === 'review' || req.query.action === 'review') && req.method === 'POST') {
       const result = await reviewQuest(ctx, (req.body ?? {}) as Parameters<typeof reviewQuest>[1]);
       if (!result.ok) {
         res.status(result.status ?? 500).json({ ok: false, error: result.error });
