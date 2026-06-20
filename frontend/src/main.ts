@@ -13,6 +13,7 @@ import { StudentJoinPage, mountStudentJoinPage } from './pages/StudentJoinPage';
 import { PilotSetupPage, mountPilotSetup } from './pages/PilotSetupPage';
 import { AuthStatus } from './components/AuthStatus';
 import { mountSmarta } from './components/smarta/Smarta';
+import { SiteFooter } from './components/SiteFooter';
 import { getSnapshot, init as initAuth, onAuthChange, signOut } from './services/authService';
 import { playLoginTransition } from './components/LoginTransition';
 
@@ -103,12 +104,7 @@ function header(activePath: string): string {
 }
 
 function footer(): string {
-  return `
-  <footer class="app-footer">
-    <div class="container">
-      INVOk · Súkromie a pseudonymita žiakov sú v základe dizajnu.
-    </div>
-  </footer>`;
+  return SiteFooter();
 }
 
 function render(): void {
