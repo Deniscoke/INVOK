@@ -14,6 +14,7 @@ import { PilotSetupPage, mountPilotSetup } from './pages/PilotSetupPage';
 import { AuthStatus } from './components/AuthStatus';
 import { mountSmarta } from './components/smarta/Smarta';
 import { getSnapshot, init as initAuth, onAuthChange, signOut } from './services/authService';
+import { playLoginTransition } from './components/LoginTransition';
 
 interface Route {
   path: string;
@@ -119,11 +120,15 @@ function render(): void {
   window.scrollTo({ top: 0 });
 
   document.querySelector('#auth-signout')?.addEventListener('click', async () => {
-    await signOut();
-    // Land on the home page after signing out instead of staying on a now
-    // role-less dashboard (which would show demo data).
-    if (currentPath() === '/') render();
-    else window.location.hash = '/';
+    // Same colored curtain as login: it COVERS first, then — *behind* the cover —
+    // we sign out and land on the home page, then it sweeps off to reveal home.
+    // So the page never visibly switches before the effect plays.
+    await playLoginTransition(() => {
+      void signOut().catch(() => {});
+      // Land on home instead of a now role-less dashboard (which shows demo data).
+      if (currentPath() === '/') render();
+      else window.location.hash = '/';
+    });
   });
   route.mount?.();
 }
