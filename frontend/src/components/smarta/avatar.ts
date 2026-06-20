@@ -31,11 +31,11 @@ export interface SmartaAvatar {
 }
 
 // --- Lip-sync tuning (safe to tweak; see public/smarta/README.md) -----------
-// Voice loudness (0..1, already scaled in lipSync.ts) thresholds with hysteresis
-// so the mouth doesn't flicker on consonants, plus a minimum hold per frame.
-const OPEN_AT = 0.16;   // open the mouth above this smoothed level
-const CLOSE_AT = 0.07;  // close the mouth below this smoothed level
-const MIN_HOLD_MS = 55; // don't swap frames faster than this
+// setMouthOpen(0..1) is driven by a timer while Smarta speaks (see tts.ts).
+// Threshold + minimum hold keep the open/closed frame swap crisp, not flickery.
+const OPEN_AT = 0.2;    // open the mouth above this level
+const CLOSE_AT = 0.1;   // close the mouth below this level
+const MIN_HOLD_MS = 60; // don't swap frames faster than this
 
 const FACE_SVG = `
 <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -139,7 +139,6 @@ function createFramesAvatar(): SmartaAvatar {
 
   let openShown = false;
   let lastSwap = 0;
-  let smooth = 0;
 
   function ensureOpenLoaded(): void {
     if (openImg && !openImg.getAttribute('src') && openImg.dataset.src) {
@@ -158,17 +157,15 @@ function createFramesAvatar(): SmartaAvatar {
     el,
     preload: ensureOpenLoaded,
     setMouthOpen(amount: number): void {
-      // Exponential smoothing damps the per-frame jitter from the analyser.
-      smooth = smooth * 0.55 + Math.max(0, Math.min(1, amount)) * 0.45;
-      if (smooth > OPEN_AT) apply(true);
-      else if (smooth < CLOSE_AT) apply(false);
+      const v = Math.max(0, Math.min(1, amount));
+      if (v > OPEN_AT) apply(true);
+      else if (v < CLOSE_AT) apply(false);
     },
     setSpeaking(speaking: boolean): void {
       el.classList.toggle('smarta-avatar--speaking', speaking);
       if (speaking) {
         ensureOpenLoaded();
       } else {
-        smooth = 0;
         openShown = false;
         el.classList.remove('is-open');
       }

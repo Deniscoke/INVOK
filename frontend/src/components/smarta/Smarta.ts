@@ -184,11 +184,13 @@ export function mountSmarta(): void {
       <span class="smarta-fab__avatar"></span>
     </button>
     <section class="smarta-panel" aria-hidden="true" aria-label="Smarta chat">
-      <header class="smarta-panel__head">
-        <span class="smarta-panel__avatar"></span>
-        <div class="smarta-panel__title"><strong>Smarta</strong><span>AI sprievodkyňa INVOK</span></div>
-        <button class="smarta-icon-btn smarta-mute" type="button" aria-label="Stlmiť hlas" title="Hlas zap./vyp.">🔊</button>
-        <button class="smarta-icon-btn smarta-close" type="button" aria-label="Zavrieť" title="Zavrieť">✕</button>
+      <header class="smarta-stage">
+        <div class="smarta-stage__tools">
+          <button class="smarta-icon-btn smarta-mute" type="button" aria-label="Stlmiť hlas" title="Hlas zap./vyp.">🔊</button>
+          <button class="smarta-icon-btn smarta-close" type="button" aria-label="Zavrieť" title="Zavrieť">✕</button>
+        </div>
+        <span class="smarta-stage__avatar"></span>
+        <div class="smarta-stage__name"><strong>Smarta</strong><span>AI sprievodkyňa INVOK</span></div>
       </header>
       <div class="smarta-messages" role="log" aria-live="polite"></div>
       <form class="smarta-input" novalidate>
@@ -204,8 +206,8 @@ export function mountSmarta(): void {
   inputEl = root.querySelector('.smarta-text') as HTMLTextAreaElement;
   micBtn = root.querySelector('.smarta-mic') as HTMLButtonElement;
 
-  // Avatar appears both in the panel header and on the floating button.
-  (root.querySelector('.smarta-panel__avatar') as HTMLElement).appendChild(avatar.el);
+  // Big avatar on the panel stage (this one lip-syncs); small one on the FAB.
+  (root.querySelector('.smarta-stage__avatar') as HTMLElement).appendChild(avatar.el);
   const fabAvatar = createAvatar();
   (root.querySelector('.smarta-fab__avatar') as HTMLElement).appendChild(fabAvatar.el);
 
