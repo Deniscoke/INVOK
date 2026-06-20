@@ -249,7 +249,7 @@
 }
 .smarta-avatar--frames .smarta-frame--open {
   opacity: 0;
-  transition: opacity 0.05s linear;
+  transition: opacity 0.07s ease-out;
 }
 .smarta-avatar--frames.is-open .smarta-frame--open { opacity: 1; }
 .smarta-avatar--speaking { animation: smarta-bob 0.9s ease-in-out infinite; }

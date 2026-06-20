@@ -33,9 +33,9 @@ export interface SmartaAvatar {
 // --- Lip-sync tuning (safe to tweak; see public/smarta/README.md) -----------
 // setMouthOpen(0..1) is driven by a timer while Smarta speaks (see tts.ts).
 // Threshold + minimum hold keep the open/closed frame swap crisp, not flickery.
-const OPEN_AT = 0.2;    // open the mouth above this level
-const CLOSE_AT = 0.1;   // close the mouth below this level
-const MIN_HOLD_MS = 60; // don't swap frames faster than this
+const OPEN_AT = 0.22;   // open the mouth above this level
+const CLOSE_AT = 0.12;  // close the mouth below this level
+const MIN_HOLD_MS = 42; // don't swap frames faster than this (allows snappier talk)
 
 const FACE_SVG = `
 <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

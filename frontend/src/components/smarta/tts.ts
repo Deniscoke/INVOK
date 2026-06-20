@@ -1,11 +1,11 @@
 /**
  * Speak a reply and animate Smarta's mouth.
  *
- * Reliability first: we play the audio element DIRECTLY (no Web Audio routing,
+ * Reliability first: the audio element plays DIRECTLY (no Web Audio routing,
  * which would make playback depend on a resumed AudioContext and often go
- * silent under autoplay rules). The mouth is driven by a simple timer while the
- * audio plays — so it visibly "talks" on every browser, even if precise volume
- * analysis isn't available.
+ * silent under autoplay rules). The mouth is driven by a 60fps requestAnimationFrame
+ * oscillator (a couple of sine waves) while the audio plays, so it talks smoothly
+ * without flicker on every browser.
  *
  * Fully degradable: if TTS is unavailable or playback is blocked, this resolves
  * quietly — the text reply is always already on screen.
@@ -13,13 +13,16 @@
 import type { SmartaAvatar } from './avatar';
 import { fetchSpeechUrl } from './smartaApi';
 
+const SPEAK_RATE = 1.2; // 20% faster than recorded
+const MOUTH_HZ = 5.8; // mouth open/close rate while speaking
+
 let current: HTMLAudioElement | null = null;
-let flapTimer = 0;
+let flapRaf = 0;
 
 function stopFlap(): void {
-  if (flapTimer) {
-    window.clearInterval(flapTimer);
-    flapTimer = 0;
+  if (flapRaf) {
+    cancelAnimationFrame(flapRaf);
+    flapRaf = 0;
   }
 }
 
@@ -40,17 +43,21 @@ export async function speak(text: string, avatar: SmartaAvatar): Promise<void> {
   stopSpeaking();
   const audio = new Audio(url);
   audio.preload = 'auto';
+  audio.playbackRate = SPEAK_RATE; // browsers preserve pitch by default
   current = audio;
   avatar.setSpeaking(true);
 
   const startFlap = (): void => {
     stopFlap();
-    let open = false;
-    flapTimer = window.setInterval(() => {
-      open = !open;
-      // Extreme values so the 2-frame avatar clearly swaps open/closed.
-      avatar.setMouthOpen(open ? 0.55 + Math.random() * 0.45 : 0);
-    }, 110);
+    const t0 = performance.now();
+    const loop = (now: number): void => {
+      const t = (now - t0) / 1000;
+      // Two sines → natural, irregular talking (not a rigid blink).
+      const v = Math.sin(t * Math.PI * 2 * MOUTH_HZ) + 0.35 * Math.sin(t * Math.PI * 2 * 1.9);
+      avatar.setMouthOpen(Math.max(0, Math.min(1, v * 0.85)));
+      flapRaf = requestAnimationFrame(loop);
+    };
+    flapRaf = requestAnimationFrame(loop);
   };
 
   try {
