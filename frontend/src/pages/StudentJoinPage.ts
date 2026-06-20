@@ -1,5 +1,6 @@
 import { Mascot } from '../components/Mascot';
 import { joinAsStudent } from '../services/authService';
+import { playLoginTransition } from '../components/LoginTransition';
 
 /**
  * Parse query params from the hash route (e.g. `#/join?code=XXX&alias=YYY`).
@@ -60,7 +61,11 @@ async function attemptJoin(): Promise<void> {
   if (result.ok) {
     // Clear sensitive code from the URL before redirecting.
     window.history.replaceState(null, '', '/#/join');
+    // Colorful welcome wipe; navigate behind it, then it fades to reveal the
+    // student dashboard.
+    const transition = playLoginTransition();
     window.location.hash = '/student';
+    await transition;
   }
 }
 

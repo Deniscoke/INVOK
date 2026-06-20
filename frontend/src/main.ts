@@ -1,5 +1,6 @@
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/login-transition.css';
 import { LandingPage } from './pages/LandingPage';
 import { StudentDashboardPage, mountStudentDashboard } from './pages/StudentDashboardPage';
 import { StudentQuestsPage, mountStudentQuestsPage } from './pages/StudentQuestsPage';

@@ -1,0 +1,129 @@
+/*
+ * Full-screen colorful wipe shown once when a student successfully joins a
+ * class, just before landing in their dashboard. Uses modern CSS
+ * (clip-path: shape(), @property). Where unsupported the spans fall back to a
+ * brief stacked color flash, and prefers-reduced-motion disables the motion.
+ */
+@property --state-top-corners {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+@property --state-top-center {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+@property --state-bottom-corners {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+@property --state-bottom-center {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+
+.invok-login-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.invok-login-transition--out {
+  opacity: 0;
+}
+
+.invok-login-transition span {
+  --speed: 1.6s;
+  position: fixed;
+  inset: 0;
+  clip-path: shape(
+    from 0% var(--state-top-corners, 0%),
+    line to 50% var(--state-top-center, 0%),
+    line to 100% var(--state-top-corners, 0%),
+    line to 100% var(--state-bottom-corners, 0%),
+    line to 50% var(--state-bottom-center, 0%),
+    line to 0% var(--state-bottom-corners, 0%),
+    close
+  );
+  animation:
+    invok-move var(--speed) var(--delay, 0s) ease-in-out,
+    invok-colors var(--speed) var(--delay, 0s) ease-in-out;
+}
+
+.invok-login-transition span:nth-of-type(1) { --delay: 0ms;   z-index: 1; background: var(--c1); }
+.invok-login-transition span:nth-of-type(2) { --delay: 70ms;  z-index: 2; background: var(--c2); }
+.invok-login-transition span:nth-of-type(3) { --delay: 140ms; z-index: 3; background: var(--c3); }
+.invok-login-transition span:nth-of-type(4) { --delay: 210ms; z-index: 4; background: var(--c4); }
+.invok-login-transition span:nth-of-type(5) { --delay: 280ms; z-index: 5; background: var(--c5); }
+.invok-login-transition span:nth-of-type(6) { --delay: 350ms; z-index: 6; background: var(--c6); }
+.invok-login-transition span:nth-of-type(7) { --delay: 420ms; z-index: 7; background: var(--c7); }
+.invok-login-transition span:nth-of-type(8) { --delay: 490ms; z-index: 8; background: var(--c8); }
+
+@keyframes invok-move {
+  12% {
+    --state-top-corners: 0%;
+    --state-top-center: 0%;
+    --state-bottom-corners: 0%;
+    --state-bottom-center: 0%;
+  }
+  24%, 28% {
+    --state-top-corners: 0%;
+    --state-top-center: 0%;
+    --state-bottom-corners: 0%;
+    --state-bottom-center: 100%;
+  }
+  40%, 60% {
+    --state-top-corners: 0%;
+    --state-top-center: 0%;
+    --state-bottom-corners: 100%;
+    --state-bottom-center: 100%;
+  }
+  72%, 76% {
+    --state-top-corners: 0%;
+    --state-top-center: 100%;
+    --state-bottom-corners: 100%;
+    --state-bottom-center: 100%;
+  }
+  88% {
+    --state-top-corners: 100%;
+    --state-top-center: 100%;
+    --state-bottom-corners: 100%;
+    --state-bottom-center: 100%;
+  }
+}
+
+@keyframes invok-colors {
+  0%, 50% {
+    --c1: #F0F0F0;
+    --c2: #E73334;
+    --c3: #F19EAC;
+    --c4: #F9D94C;
+    --c5: #49A372;
+    --c6: #2D38D1;
+    --c7: #6325C6;
+    --c8: #000000;
+  }
+  51%, 100% {
+    --c8: #F0F0F0;
+    --c7: #E73334;
+    --c6: #F19EAC;
+    --c5: #F9D94C;
+    --c4: #49A372;
+    --c3: #2D38D1;
+    --c2: #6325C6;
+    --c1: #000000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invok-login-transition span {
+    animation: none;
+    clip-path: none;
+    opacity: 0.85;
+  }
+}
