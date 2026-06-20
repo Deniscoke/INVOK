@@ -69,6 +69,13 @@ export interface PhotoEvidence {
   dataUrl?: string;
 }
 
+export interface SubmissionAttachment {
+  name: string;
+  type: string;
+  sizeBytes: number;
+  path: string;
+}
+
 export interface SolutionSubmissionFields {
   missionId: string;
   classId?: string;
@@ -82,8 +89,16 @@ export interface SolutionSubmissionFields {
   impact?: string;
   /** Voliteľná fotka ako dôkaz (popis + base64 náhľad) */
   photo?: PhotoEvidence;
+  /** Nahraná dokumentácia projektu (do Supabase Storage), referencovaná cestou. */
+  attachments?: SubmissionAttachment[];
   /** When the submission belongs to a student-proposed quest. */
   studentQuestId?: string;
+}
+
+function describeAttachment(a: SubmissionAttachment): string {
+  const kb = Math.max(1, Math.round(a.sizeBytes / 1024));
+  const size = kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} kB`;
+  return `${a.name} (${a.type || 'súbor'}, ${size})`;
 }
 
 function studentToken(): string | null {
@@ -189,6 +204,12 @@ export async function submitSolution(fields: SolutionSubmissionFields): Promise<
       photo.caption?.trim() ? `Popis fotky: ${photo.caption.trim()}` : '',
     ].filter(Boolean).join('\n');
     evidenceParts.push(photoSummary);
+  }
+  // Surface uploaded documentation so the AI and the teacher both see it as
+  // (strong) evidence. The actual files live in Storage; the teacher opens them.
+  if (fields.attachments && fields.attachments.length > 0) {
+    const list = fields.attachments.map(describeAttachment).join(', ');
+    evidenceParts.push(`Priložená dokumentácia (${fields.attachments.length} ${fields.attachments.length === 1 ? 'súbor' : 'súborov'}): ${list}`);
   }
   const evidenceText = evidenceParts.filter(Boolean).join('\n');
 

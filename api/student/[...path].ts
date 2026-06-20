@@ -20,9 +20,11 @@ import {
   createOwnQuest,
   deleteOwnQuest,
   listOwnQuests,
+  loadQuestForStudent,
 } from '../../backend/services/studentQuestService.js';
 import { generateQuest } from '../../backend/services/questGeneratorService.js';
 import { routeSegments } from '../../backend/lib/routePath.js';
+import { createQuestUploadUrl, isAllowedAttachmentType, ATTACH_MAX_FILE_BYTES } from '../../backend/lib/storage.js';
 
 function bearerToken(req: VercelRequest): string | null {
   const header = req.headers.authorization ?? '';
@@ -60,6 +62,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
     const result = await verifyStudentSession(body.sessionToken);
     res.status(result.valid ? 200 : 401).json(result);
+    return;
+  }
+
+  // POST /api/student/upload — issue a signed upload URL for one quest attachment.
+  if (route === 'upload') {
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      res.status(405).json({ error: 'Method Not Allowed' });
+      return;
+    }
+    const token = bearerToken(req);
+    if (!token) {
+      res.status(401).json({ ok: false, error: 'Chýba študentský session token.' });
+      return;
+    }
+    const session = await verifyStudentSession(token);
+    if (!session.valid || !session.studentAccessCodeId) {
+      res.status(401).json({ ok: false, error: 'Neplatná študentská session.' });
+      return;
+    }
+    const questId = typeof body.studentQuestId === 'string' ? body.studentQuestId : '';
+    const fileName = typeof body.fileName === 'string' ? body.fileName : '';
+    const contentType = typeof body.contentType === 'string' ? body.contentType : 'application/octet-stream';
+    const sizeBytes = Number(body.sizeBytes ?? 0);
+    if (!questId || !fileName) {
+      res.status(400).json({ ok: false, error: 'Chýba misia alebo názov súboru.' });
+      return;
+    }
+    if (!isAllowedAttachmentType(contentType)) {
+      res.status(400).json({ ok: false, error: 'Nepodporovaný typ súboru.' });
+      return;
+    }
+    if (sizeBytes > ATTACH_MAX_FILE_BYTES) {
+      res.status(400).json({ ok: false, error: 'Súbor je príliš veľký (max 50 MB).' });
+      return;
+    }
+    // The quest must belong to this student and be in a submittable state.
+    const quest = await loadQuestForStudent(session.studentAccessCodeId, questId);
+    if (!quest) {
+      res.status(403).json({ ok: false, error: 'Táto misia nepatrí tebe.' });
+      return;
+    }
+    if (quest.state !== 'approved' && quest.state !== 'changes_requested') {
+      res.status(409).json({ ok: false, error: 'Súbory môžeš pridať až keď je misia schválená učiteľom.' });
+      return;
+    }
+    const signed = await createQuestUploadUrl(questId, fileName);
+    if (!signed) {
+      res.status(500).json({ ok: false, error: 'Nahrávanie momentálne nie je dostupné.' });
+      return;
+    }
+    res.status(200).json({ ok: true, ...signed });
     return;
   }
 

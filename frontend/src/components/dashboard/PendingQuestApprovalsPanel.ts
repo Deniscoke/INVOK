@@ -18,6 +18,7 @@ import {
   type ApprovalDecision,
   type TeacherQuestRow,
 } from '../../services/teacherQuestApi';
+import { listQuestFilesForTeacher } from '../../services/uploadApi';
 
 function escapeHtml(value: string): string {
   return value
@@ -79,6 +80,12 @@ function questCard(q: TeacherQuestRow): string {
         ${q.approvedDeadline ? ` · <strong>schválený:</strong> ${formatDate(q.approvedDeadline)}` : ''}
       </span>
     </div>
+
+    ${q.state === 'pending_approval' || q.state === 'rejected' || q.state === 'draft' ? '' : `
+    <div style="margin-top:var(--space-3)">
+      <button type="button" class="btn btn--ghost btn--sm" data-files-btn="${escapeHtml(q.id)}">📎 Dokumentácia žiaka</button>
+      <div data-files-slot="${escapeHtml(q.id)}" style="margin-top:var(--space-2)"></div>
+    </div>`}
 
     ${isActionable ? `
     <form class="stack" data-quest-form="${escapeHtml(q.id)}" style="margin-top:var(--space-4);background:var(--tint-muted, #f8fafc);padding:var(--space-3);border-radius:var(--radius-md)">
@@ -160,6 +167,36 @@ function setBusy(form: HTMLFormElement, busy: boolean): void {
 
 function bindForms(): void {
   if (!containerRef) return;
+
+  // Lazy-load a quest's uploaded documentation with fresh signed download links.
+  for (const fbtn of Array.from(containerRef.querySelectorAll<HTMLButtonElement>('button[data-files-btn]'))) {
+    fbtn.addEventListener('click', async () => {
+      const id = fbtn.getAttribute('data-files-btn');
+      const slot = id ? containerRef!.querySelector<HTMLElement>(`[data-files-slot="${id}"]`) : null;
+      if (!id || !slot) return;
+      fbtn.disabled = true;
+      const original = fbtn.textContent;
+      fbtn.textContent = 'Načítavam…';
+      const files = await listQuestFilesForTeacher(id);
+      fbtn.disabled = false;
+      fbtn.textContent = original;
+      if (files.length === 0) {
+        slot.innerHTML = '<p class="muted" style="font-size:var(--fs-sm)">Žiak zatiaľ nepriložil žiadne súbory.</p>';
+        return;
+      }
+      slot.innerHTML =
+        '<ul style="margin:0;padding-left:18px">' +
+        files
+          .map((f) => {
+            const kb = Math.max(1, Math.round(f.sizeBytes / 1024));
+            const size = kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} kB`;
+            return `<li style="margin:2px 0"><a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">${escapeHtml(f.name)}</a> <span class="muted" style="font-size:var(--fs-xs)">(${size})</span></li>`;
+          })
+          .join('') +
+        '</ul>';
+    });
+  }
+
   for (const btn of Array.from(containerRef.querySelectorAll<HTMLButtonElement>('button[data-quest-action]'))) {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-quest-id');

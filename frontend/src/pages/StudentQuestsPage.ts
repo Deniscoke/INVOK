@@ -27,6 +27,7 @@ import {
   type StudentQuest,
 } from '../services/questStore';
 import { submitSolution, type SubmissionResult } from '../services/submissionApi';
+import { uploadQuestFile, ATTACH_MAX_FILES, type UploadedAttachment } from '../services/uploadApi';
 
 let pendingMount: (() => void) | null = null;
 
@@ -124,6 +125,14 @@ function renderSubmitPanel(q: StudentQuest): string {
       <label class="field">Prínos / koho sa to týka (voliteľné)
         <input type="text" data-submit-field="impact" maxlength="500"
           placeholder="napr. žiaci v jedálni, susedstvo školy...">
+      </label>
+      <label class="field">📎 Dokumentácia projektu (voliteľné)
+        <input type="file" data-submit-files multiple
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip">
+        <span class="muted" style="display:block;margin-top:4px;font-size:var(--fs-xs)">
+          Pridaj všetko, čím vieš ukázať svoju misiu — <strong>fotky, prezentáciu, PDF, video, dokument…</strong>
+          Môžeš naraz vybrať viac súborov (max ${ATTACH_MAX_FILES}, každý do 50 MB). Učiteľ aj AI ich uvidia.
+        </span>
       </label>
       <p class="muted" data-submit-msg="${escapeHtml(q.id)}" role="status" aria-live="polite" style="margin:0"></p>
       <div data-submit-result="${escapeHtml(q.id)}"></div>
@@ -599,16 +608,42 @@ function bindSubmitForms(): void {
         return;
       }
 
+      // Upload any attached documentation first (straight to Storage).
+      const fileInput = form.querySelector<HTMLInputElement>('[data-submit-files]');
+      const files = fileInput?.files ? Array.from(fileInput.files) : [];
+      if (files.length > ATTACH_MAX_FILES) {
+        if (msg) msg.textContent = `Naraz môžeš nahrať najviac ${ATTACH_MAX_FILES} súborov.`;
+        return;
+      }
       if (btn) { btn.disabled = true; btn.textContent = 'Odosielam…'; }
+
+      let attachments: UploadedAttachment[] = [];
+      if (files.length > 0) {
+        try {
+          attachments = [];
+          for (let i = 0; i < files.length; i += 1) {
+            if (msg) msg.textContent = `Nahrávam súbory (${i + 1}/${files.length})…`;
+            attachments.push(await uploadQuestFile(questId, files[i]));
+          }
+        } catch (err) {
+          if (msg) msg.textContent = err instanceof Error ? err.message : 'Nahrávanie súborov zlyhalo.';
+          if (btn) { btn.disabled = false; btn.textContent = 'Odovzdať na AI + učiteľa'; }
+          return;
+        }
+      }
+
+      if (msg) msg.textContent = 'Odosielam…';
       const result = await submitSolution({
         missionId: quest.title.slice(0, 60),
         solutionSummary,
         evidence,
         firstStep,
         impact: impact || undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
         studentQuestId: questId,
       });
       if (btn) { btn.disabled = false; btn.textContent = 'Odovzdať na AI + učiteľa'; }
+      if (msg) msg.textContent = '';
 
       if (slot) renderSubmitResult(slot, result);
 

@@ -20,7 +20,7 @@ import {
 import { REVIEW_DECISIONS, type ReviewDecision } from '../../backend/validators/teacherReviewValidator.js';
 import { getTeacherSubmissions } from '../../backend/services/submissionService.js';
 import { validateQueryFilter } from '../../backend/validators/submissionValidator.js';
-import { listClassPendingQuests, reviewQuest } from '../../backend/services/studentQuestService.js';
+import { listClassPendingQuests, reviewQuest, listQuestAttachments } from '../../backend/services/studentQuestService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const segments = routeSegments(req, 'teacher');
@@ -122,6 +122,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         return;
       }
       res.status(200).json({ ok: true, quest: result.data, source: result.source });
+      return;
+    }
+
+    // GET /api/teacher/quests?action=files&questId=… → a quest's attachments.
+    if (req.query.action === 'files' && req.method === 'GET') {
+      const questId = typeof req.query.questId === 'string' ? req.query.questId : '';
+      const result = await listQuestAttachments(ctx, questId);
+      if (!result.ok) {
+        res.status(result.status ?? 500).json({ ok: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ ok: true, files: result.data });
       return;
     }
 

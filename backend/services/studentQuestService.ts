@@ -15,6 +15,7 @@
 import { getServerEnv, missingServerSecrets } from '../lib/env.js';
 import { verifyStudentSession } from './studentAccessService.js';
 import type { ValidationIssue } from './studentAccessService.js';
+import { listQuestFiles, type QuestFile } from '../lib/storage.js';
 
 export type QuestSource = 'student' | 'ai';
 
@@ -410,13 +411,42 @@ export async function listClassPendingQuests(
       .from('student_quests')
       .select('*, student_access_codes(pseudonym)')
       .in('class_id', filterIds)
-      .in('state', ['pending_approval', 'changes_requested', 'approved'])
+      .in('state', ['pending_approval', 'changes_requested', 'approved', 'submitted'])
       .order('created_at', { ascending: false });
     if (error) return { ok: false, error: error.message, status: 500 };
     const rows = (data ?? []) as Record<string, unknown>[];
     return { ok: true, data: rows.map(mapRow), source: 'db' };
   } catch {
     return { ok: false, error: 'Načítanie misií zlyhalo.', status: 500 };
+  }
+}
+
+/** List a quest's uploaded attachments (teacher who manages the class, or admin). */
+export async function listQuestAttachments(ctx: RequestContext, questId: string): Promise<ServiceResult<QuestFile[]>> {
+  if (ctx.mode !== 'supabase_user' || (ctx.role !== 'teacher' && ctx.role !== 'admin')) {
+    return { ok: false, error: 'Iba učiteľ/admin.', status: 403 };
+  }
+  if (!isConfigured()) return mockUnavailable();
+  if (!questId) return { ok: false, error: 'Chýba ID misie.', status: 400 };
+  try {
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
+    const admin = getSupabaseAdmin();
+    const { data } = await admin.from('student_quests').select('class_id').eq('id', questId).maybeSingle();
+    const row = data as Record<string, unknown> | null;
+    if (!row) return { ok: false, error: 'Misia sa nenašla.', status: 404 };
+    if (ctx.role !== 'admin') {
+      const { data: membership } = await admin
+        .from('class_memberships')
+        .select('id')
+        .eq('class_id', row.class_id as string)
+        .eq('user_id', ctx.userId)
+        .eq('role', 'teacher')
+        .maybeSingle();
+      if (!membership) return { ok: false, error: 'Túto triedu neučíš.', status: 403 };
+    }
+    return { ok: true, data: await listQuestFiles(questId), source: 'db' };
+  } catch {
+    return { ok: false, error: 'Načítanie príloh zlyhalo.', status: 500 };
   }
 }
 
