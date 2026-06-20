@@ -1,0 +1,68 @@
+/* ============================================================================
+   "Moje INVOK portfólio" — scrollable showcase overlay + print isolation.
+   ============================================================================ */
+.invok-portfolio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10045;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 14px 40px;
+  overflow: auto;
+  background: rgba(16, 18, 34, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.invok-portfolio-overlay__bar { display: flex; gap: 10px; position: sticky; top: 0; }
+
+.invok-portfolio {
+  width: min(820px, 100%);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: clamp(20px, 3.4vw, 40px);
+  color: var(--color-text);
+}
+
+.pf-head { text-align: center; padding-bottom: var(--space-4); border-bottom: 2px solid var(--color-border); margin-bottom: var(--space-4); }
+.pf-head__brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 900; font-size: var(--fs-lg); letter-spacing: -0.02em; }
+.pf-head__mark { width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--gradient-hero); color: #fff; display: grid; place-items: center; font-size: 0.6em; font-weight: 800; }
+.pf-head h1 { margin: 8px 0 4px; font-size: var(--fs-2xl); }
+.pf-head__who { color: var(--color-muted); font-size: var(--fs-sm); }
+.pf-head__who strong { color: var(--color-text); }
+
+.pf-section { margin-top: var(--space-5); }
+.pf-section h3 { margin: 0 0 var(--space-3); font-size: var(--fs-lg); }
+
+.pf-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--space-3); }
+.pf-badge { text-align: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: 4px; }
+.pf-badge--locked { opacity: 0.55; filter: grayscale(0.6); }
+.pf-badge__icon { font-size: 30px; line-height: 1; }
+.pf-badge strong { font-size: var(--fs-sm); }
+.pf-badge .muted { font-size: var(--fs-xs); }
+
+.pf-list { list-style: none; margin: 0; padding: 0; }
+.pf-list li { display: flex; justify-content: space-between; gap: var(--space-3); padding: 7px 0; border-bottom: 1px solid var(--color-border); font-size: var(--fs-sm); }
+.pf-list li:last-child { border-bottom: 0; }
+
+.pf-cards { display: grid; gap: var(--space-3); }
+.pf-card { border: 1px solid var(--color-border); border-left: 4px solid var(--color-primary); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.pf-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: 6px; }
+.pf-card__head strong { font-size: var(--fs-md); }
+.pf-meta { margin: 2px 0; font-size: var(--fs-sm); color: var(--color-text); }
+.pf-meta strong { color: var(--color-muted); font-weight: 600; }
+.pf-files { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pf-files a { font-size: var(--fs-xs); font-weight: 600; color: var(--color-primary-strong); text-decoration: none; background: var(--tint-primary); padding: 4px 10px; border-radius: var(--radius-pill); }
+.pf-files a:hover { text-decoration: underline; }
+
+@media print {
+  body > *:not(.invok-portfolio-overlay) { display: none !important; }
+  body::before { display: none !important; }
+  .invok-portfolio-overlay { position: static !important; display: block !important; padding: 0 !important; background: #fff !important; backdrop-filter: none !important; }
+  .invok-portfolio-overlay__bar { display: none !important; }
+  .invok-portfolio { width: 100% !important; max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; }
+  .pf-card, .pf-badge, .pf-section { break-inside: avoid; }
+  @page { size: A4 portrait; margin: 14mm; }
+}
