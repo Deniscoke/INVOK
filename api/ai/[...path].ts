@@ -132,6 +132,9 @@ async function handleSmartaTts(req: VercelRequest, res: VercelResponse): Promise
   }
   const env = getServerEnv();
 
+  // ?debug=1 → report WHY ElevenLabs fails (status + message), never the key.
+  const debug = req.query.debug === '1';
+
   // 1) ElevenLabs (preferred when configured). If it fails, fall through to
   //    OpenAI rather than killing TTS — a mis-set voice/key shouldn't mute Smarta.
   if (env.elevenLabsApiKey && env.elevenLabsVoiceId) {
@@ -141,15 +144,31 @@ async function handleSmartaTts(req: VercelRequest, res: VercelResponse): Promise
         headers: { 'xi-api-key': env.elevenLabsApiKey, 'content-type': 'application/json', accept: 'audio/mpeg' },
         body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2' }),
       });
+      if (debug) {
+        const detail = r.ok ? '(audio ok)' : (await r.text()).slice(0, 500);
+        res.status(200).json({
+          provider: 'elevenlabs', status: r.status, ok: r.ok, detail,
+          keyLen: env.elevenLabsApiKey.length, voiceIdLen: env.elevenLabsVoiceId.length,
+          voiceIdPreview: `${env.elevenLabsVoiceId.slice(0, 4)}…${env.elevenLabsVoiceId.slice(-2)}`,
+        });
+        return;
+      }
       if (r.ok) {
         res.setHeader('X-TTS-Provider', 'elevenlabs');
         sendAudio(res, Buffer.from(await r.arrayBuffer()));
         return;
       }
       // non-2xx (bad key/voice/quota) → continue to OpenAI fallback
-    } catch {
+    } catch (err) {
+      if (debug) {
+        res.status(200).json({ provider: 'elevenlabs', error: (err instanceof Error ? err.message : String(err)).slice(0, 200) });
+        return;
+      }
       // network error → continue to OpenAI fallback
     }
+  } else if (debug) {
+    res.status(200).json({ provider: 'elevenlabs', configured: false, keyPresent: Boolean(env.elevenLabsApiKey), voicePresent: Boolean(env.elevenLabsVoiceId) });
+    return;
   }
 
   // 2) OpenAI TTS fallback.
