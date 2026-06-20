@@ -69,6 +69,21 @@ async function teacherHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
+/** Student: list their own quest's uploaded files (history) with download URLs. */
+export async function listMyQuestFiles(questId: string): Promise<TeacherFile[]> {
+  const token = studentToken();
+  if (!token) return [];
+  try {
+    const res = await fetch(`/api/student/quests?action=files&questId=${encodeURIComponent(questId)}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; files?: TeacherFile[] } | null;
+    return res.ok && data?.ok && Array.isArray(data.files) ? data.files : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Teacher: list a quest's uploaded files with fresh signed download URLs. */
 export async function listQuestFilesForTeacher(questId: string): Promise<TeacherFile[]> {
   try {

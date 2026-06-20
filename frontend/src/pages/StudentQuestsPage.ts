@@ -26,8 +26,9 @@ import {
   type QuestState,
   type StudentQuest,
 } from '../services/questStore';
-import { submitSolution, type SubmissionResult } from '../services/submissionApi';
-import { uploadQuestFile, ATTACH_MAX_FILES, type UploadedAttachment } from '../services/uploadApi';
+import { submitSolution, fetchMySubmissions, type SubmissionResult, type AiEvaluation } from '../services/submissionApi';
+import { uploadQuestFile, listMyQuestFiles, ATTACH_MAX_FILES, type UploadedAttachment } from '../services/uploadApi';
+import { getCompetencies } from '../services/mockDataService';
 
 let pendingMount: (() => void) | null = null;
 
@@ -99,6 +100,10 @@ function questCard(q: StudentQuest): string {
     ${canSubmit ? renderSubmitPanel(q) : ''}
     ${q.state === 'submitted' ? renderSubmittedHint() : ''}
     ${q.state === 'completed' ? renderCompletedHint() : ''}
+    ${(q.state === 'submitted' || q.state === 'completed') && q.submissionId && state.evaluations[q.submissionId]
+      ? renderAiFeedback(state.evaluations[q.submissionId], state.xp[q.submissionId] ?? 0)
+      : ''}
+    ${renderMyFiles(q)}
     ${canDelete
       ? `<div style="margin-top:var(--space-3)"><button type="button" class="btn btn--ghost btn--sm" data-action="delete-quest" data-quest-id="${escapeHtml(q.id)}">Zmazať</button></div>`
       : ''}
@@ -228,10 +233,51 @@ interface PageState {
   loaded: boolean;
   loading: boolean;
   quests: StudentQuest[];
+  /** AI evaluation per submission id (so the student keeps seeing the feedback). */
+  evaluations: Record<string, AiEvaluation>;
+  /** Provisional XP per submission id. */
+  xp: Record<string, number>;
   error?: string;
 }
 
-let state: PageState = { loaded: false, loading: false, quests: [] };
+let state: PageState = { loaded: false, loading: false, quests: [], evaluations: {}, xp: {} };
+
+function competencyName(id: string): string {
+  return getCompetencies().find((c) => c.id === id)?.childName ?? id;
+}
+
+/** Persistent AI feedback card shown on a submitted/completed quest. */
+function renderAiFeedback(ev: AiEvaluation, xp: number): string {
+  const conf = Math.round(ev.confidence * 100);
+  const learned = (ev.detectedCompetencies ?? [])
+    .map((d) => competencyName(d.id))
+    .filter(Boolean);
+  const reasons = (ev.reasons ?? []).slice(0, 5).map((r) => {
+    const chip = r.result === 'met' ? 'chip--accent' : r.result === 'partial' ? 'chip--warm' : 'chip--muted';
+    return `<li style="margin:4px 0"><strong>${escapeHtml(r.criterion)}</strong>: ${escapeHtml(r.explanation)}
+      <span class="chip ${chip}" style="margin-left:4px">${escapeHtml(r.result)}</span></li>`;
+  }).join('');
+  return `
+  <div class="card" style="margin-top:var(--space-3);border-left:4px solid ${ev.valid ? 'var(--color-success)' : '#f59e0b'}">
+    <div class="muted" style="font-size:var(--fs-xs)">🤖 Čo si o tvojej odpovedi myslí AI (${escapeHtml(ev.model)})</div>
+    <h4 style="margin:4px 0 0">Skóre ${ev.score} / 100 · istota ${conf} %
+      <span class="chip ${ev.valid ? 'chip--accent' : 'chip--warm'}" style="margin-left:6px">${ev.valid ? 'vyzerá dobre' : 'na doladenie'}</span></h4>
+    ${xp ? `<p class="muted" style="margin:8px 0 0">Predbežné XP: <strong>${xp}</strong> (učiteľ potvrdí).</p>` : ''}
+    ${learned.length ? `<p style="margin:8px 0 0"><strong>Čo si preukázal/a:</strong> ${learned.map(escapeHtml).join(', ')}</p>` : ''}
+    ${reasons ? `<ul style="margin:var(--space-3) 0 0;padding-left:18px">${reasons}</ul>` : ''}
+    <p class="muted" style="margin:8px 0 0;font-size:var(--fs-sm)">Toto je <strong>návrh AI</strong> — finálne hodnotenie a XP potvrdí tvoj učiteľ.</p>
+  </div>`;
+}
+
+/** Button + slot to (lazily) show the student's own uploaded files for a quest. */
+function renderMyFiles(q: StudentQuest): string {
+  if (q.state === 'pending_approval' || q.state === 'draft' || q.state === 'rejected') return '';
+  return `
+  <div style="margin-top:var(--space-3)">
+    <button type="button" class="btn btn--ghost btn--sm" data-myfiles-btn="${escapeHtml(q.id)}">📎 Moje nahraté súbory</button>
+    <div data-myfiles-slot="${escapeHtml(q.id)}" style="margin-top:var(--space-2)"></div>
+  </div>`;
+}
 
 function renderListSection(): string {
   if (state.loading) {
@@ -260,6 +306,7 @@ export function StudentQuestsPage(): string {
     bindProposeForm();
     bindAiForm();
     bindSubmitForms();
+    bindMyFilesButtons();
   };
 
   return `
@@ -336,6 +383,20 @@ async function refreshQuests(): Promise<void> {
   try {
     const list = await listQuests();
     state.quests = list;
+    // Load my submissions so the AI feedback persists on submitted/completed quests.
+    try {
+      const subs = await fetchMySubmissions();
+      const evaluations: Record<string, AiEvaluation> = {};
+      const xp: Record<string, number> = {};
+      for (const s of subs) {
+        if (s.evaluation) evaluations[s.id] = s.evaluation;
+        xp[s.id] = s.xpAwarded;
+      }
+      state.evaluations = evaluations;
+      state.xp = xp;
+    } catch {
+      /* feedback is best-effort */
+    }
     state.loaded = true;
     state.loading = false;
     // Full re-render so the "active count" chip + limit banner reflect reality.
@@ -344,6 +405,36 @@ async function refreshQuests(): Promise<void> {
     state.loading = false;
     state.error = err instanceof Error ? err.message : 'Nepodarilo sa načítať misie.';
     updateListDom();
+  }
+}
+
+function bindMyFilesButtons(): void {
+  for (const btn of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-myfiles-btn]'))) {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-myfiles-btn');
+      const slot = id ? document.querySelector<HTMLElement>(`[data-myfiles-slot="${id}"]`) : null;
+      if (!id || !slot) return;
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = 'Načítavam…';
+      const files = await listMyQuestFiles(id);
+      btn.disabled = false;
+      btn.textContent = original;
+      if (files.length === 0) {
+        slot.innerHTML = '<p class="muted" style="font-size:var(--fs-sm)">Zatiaľ si k tejto misii nenahral/a žiadne súbory.</p>';
+        return;
+      }
+      slot.innerHTML =
+        '<ul style="margin:0;padding-left:18px">' +
+        files
+          .map((f) => {
+            const kb = Math.max(1, Math.round(f.sizeBytes / 1024));
+            const size = kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} kB`;
+            return `<li style="margin:2px 0"><a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">${escapeHtml(f.name)}</a> <span class="muted" style="font-size:var(--fs-xs)">(${size})</span></li>`;
+          })
+          .join('') +
+        '</ul>';
+    });
   }
 }
 

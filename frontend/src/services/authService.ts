@@ -96,10 +96,37 @@ async function refreshFromSupabase(): Promise<void> {
   };
 }
 
+/**
+ * Restore a pseudonymous student session from the stored token, so a reload
+ * keeps the student "logged in" (header, nav). Only runs when there is no
+ * Supabase auth user (teachers take precedence). Drops an expired token.
+ */
+async function restoreStudentSession(): Promise<void> {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem(STUDENT_TOKEN_KEY) : null;
+  if (!token) return;
+  try {
+    const response = await fetch('/api/student/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sessionToken: token }),
+    });
+    const data = (await response.json()) as { valid?: boolean; studentAlias?: string };
+    if (response.ok && data.valid) {
+      const alias = data.studentAlias ?? 'Žiak';
+      snapshot = { mode: 'supabase', user: { id: `student:${alias}`, role: 'student', displayName: alias } };
+    } else {
+      localStorage.removeItem(STUDENT_TOKEN_KEY); // expired / invalid
+    }
+  } catch {
+    /* offline — stay logged out, the token remains for next time */
+  }
+}
+
 /** Initialize auth state once on app start. */
 export async function init(): Promise<void> {
   if (isSupabaseConfigured && supabase) {
     await refreshFromSupabase();
+    if (!snapshot.user) await restoreStudentSession(); // no teacher → try student
     // Supabase fires this on token refresh / tab focus too. Re-render only when
     // the actual identity changes — otherwise an in-progress page (e.g. pilot
     // setup with generated codes) would reset to the top on a background refresh.

@@ -24,7 +24,7 @@ import {
 } from '../../backend/services/studentQuestService.js';
 import { generateQuest } from '../../backend/services/questGeneratorService.js';
 import { routeSegments } from '../../backend/lib/routePath.js';
-import { createQuestUploadUrl, isAllowedAttachmentType, ATTACH_MAX_FILE_BYTES } from '../../backend/lib/storage.js';
+import { createQuestUploadUrl, listQuestFiles, isAllowedAttachmentType, ATTACH_MAX_FILE_BYTES } from '../../backend/lib/storage.js';
 
 function bearerToken(req: VercelRequest): string | null {
   const header = req.headers.authorization ?? '';
@@ -144,6 +144,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         studentAlias: session.studentAlias,
       });
       res.status(result.ok ? 200 : 400).json(result);
+      return;
+    }
+
+    // GET /api/student/quests?action=files&questId=… — own quest's attachments
+    // (the student's file history, with fresh signed download URLs).
+    if (req.query.action === 'files' && req.method === 'GET') {
+      const session = await verifyStudentSession(token);
+      if (!session.valid || !session.studentAccessCodeId) {
+        res.status(401).json({ ok: false, error: 'Neplatná študentská session.' });
+        return;
+      }
+      const questId = typeof req.query.questId === 'string' ? req.query.questId : '';
+      const quest = await loadQuestForStudent(session.studentAccessCodeId, questId);
+      if (!quest) {
+        res.status(403).json({ ok: false, error: 'Táto misia nepatrí tebe.' });
+        return;
+      }
+      res.status(200).json({ ok: true, files: await listQuestFiles(questId) });
       return;
     }
 

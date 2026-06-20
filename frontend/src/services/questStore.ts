@@ -48,6 +48,7 @@ export interface StudentQuest {
   proposedDeadline?: string;
   approvedDeadline?: string;
   teacherFeedback?: string;
+  submissionId?: string; // set once the student submits a solution
   xpEstimate?: number;
   createdAt: string;
   updatedAt: string;
