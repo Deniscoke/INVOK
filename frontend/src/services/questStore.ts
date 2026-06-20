@@ -340,6 +340,14 @@ export function countActive(quests: StudentQuest[]): number {
   return quests.filter((q) => isActive(q.state)).length;
 }
 
+/**
+ * True when the student has a real class-join session (Supabase + token), so
+ * AI runs live on the server. False = local demo mode (no code joined yet).
+ */
+export function hasLiveStudentSession(): boolean {
+  return isApiMode();
+}
+
 export const QUEST_LIMITS = {
   MAX_ACTIVE: MAX_ACTIVE_QUESTS,
 };

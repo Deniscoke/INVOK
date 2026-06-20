@@ -21,6 +21,7 @@ import {
   createQuest,
   deleteQuest,
   generateQuestDraft,
+  hasLiveStudentSession,
   listQuests,
   type QuestState,
   type StudentQuest,
@@ -271,6 +272,14 @@ export function StudentQuestsPage(): string {
     </p>
   </section>
 
+  ${!hasLiveStudentSession() ? `
+  <section class="card" style="margin-top:var(--space-4);border-left:4px solid var(--color-warm);background:#fffbeb">
+    <strong>Si v demo režime 🧪</strong>
+    <p class="muted" style="margin:6px 0 0">AI návrhy sú zatiaľ ukážkové. Pre <strong>živé AI</strong> sa
+      odhlás a prihlás cez <strong>„Som žiak"</strong> s kódom triedy od učiteľa
+      (na vyskúšanie funguje kód <code>DEMO-2026</code>).</p>
+  </section>` : ''}
+
   ${overLimit ? `
   <section class="card" style="margin-top:var(--space-4);border-left:4px solid var(--color-danger);background:#fef2f2">
     <strong>Dosiahol si limit ${QUEST_LIMITS.MAX_ACTIVE} aktívnych misií.</strong>
@@ -412,7 +421,7 @@ function renderAiPreview(d: AiDraft, source: 'openai' | 'mock' | undefined): str
   const outcomes = Array.isArray(d.learningOutcomes) ? d.learningOutcomes.filter(Boolean) : [];
   const sourceLabel = source === 'openai'
     ? `🤖 AI návrh (${escapeHtml(d.aiModel ?? 'openai')})`
-    : 'Demo šablóna (AI nie je zapnuté na serveri)';
+    : 'Ukážkový návrh (demo režim — bez pripojenia do triedy)';
   return `
   <div class="card" style="border-left:4px solid var(--color-accent);background:var(--tint-accent, #eef2ff)">
     <div class="muted" style="font-size:var(--fs-xs)">${sourceLabel} · skontroluj a pošli, alebo skús iný návrh</div>
