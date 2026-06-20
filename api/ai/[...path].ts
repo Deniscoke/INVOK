@@ -132,20 +132,28 @@ async function handleSmartaTts(req: VercelRequest, res: VercelResponse): Promise
   }
   const env = getServerEnv();
 
-  try {
-    // Preferred provider: ElevenLabs (when both key + voice are configured).
-    if (env.elevenLabsApiKey && env.elevenLabsVoiceId) {
+  // 1) ElevenLabs (preferred when configured). If it fails, fall through to
+  //    OpenAI rather than killing TTS — a mis-set voice/key shouldn't mute Smarta.
+  if (env.elevenLabsApiKey && env.elevenLabsVoiceId) {
+    try {
       const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(env.elevenLabsVoiceId)}`, {
         method: 'POST',
         headers: { 'xi-api-key': env.elevenLabsApiKey, 'content-type': 'application/json', accept: 'audio/mpeg' },
         body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2' }),
       });
-      if (!r.ok) throw new Error('elevenlabs');
-      sendAudio(res, Buffer.from(await r.arrayBuffer()));
-      return;
+      if (r.ok) {
+        res.setHeader('X-TTS-Provider', 'elevenlabs');
+        sendAudio(res, Buffer.from(await r.arrayBuffer()));
+        return;
+      }
+      // non-2xx (bad key/voice/quota) → continue to OpenAI fallback
+    } catch {
+      // network error → continue to OpenAI fallback
     }
+  }
 
-    // Fallback provider: OpenAI TTS.
+  // 2) OpenAI TTS fallback.
+  try {
     if (!env.openaiApiKey) {
       res.status(204).end(); // no provider → frontend stays text-only
       return;
@@ -158,9 +166,9 @@ async function handleSmartaTts(req: VercelRequest, res: VercelResponse): Promise
     }
     const voice = typeof body.voice === 'string' && OPENAI_VOICES.includes(body.voice) ? body.voice : 'nova';
     const speech = await client.audio.speech.create({ model: env.openaiTtsModel, voice, input: text, response_format: 'mp3' });
+    res.setHeader('X-TTS-Provider', 'openai');
     sendAudio(res, Buffer.from(await speech.arrayBuffer()));
   } catch {
-    // Frontend must keep working with the text reply only.
     res.status(502).json({ error: 'TTS zlyhalo.' });
   }
 }

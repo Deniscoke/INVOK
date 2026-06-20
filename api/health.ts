@@ -70,6 +70,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         OPENAI_API_KEY_present: Boolean(process.env.OPENAI_API_KEY),
         OPENAI_VALIDATION_PROVIDER: process.env.OPENAI_VALIDATION_PROVIDER ?? '(unset)',
         PILOT_SETUP_ENABLED: process.env.PILOT_SETUP_ENABLED ?? '(unset)',
+        // Smarta TTS / chat config
+        OPENAI_MODEL: process.env.OPENAI_MODEL ?? '(default gpt-4.1-mini)',
+        OPENAI_TTS_MODEL: process.env.OPENAI_TTS_MODEL ?? '(default gpt-4o-mini-tts)',
+        ELEVENLABS_API_KEY_present: Boolean(process.env.ELEVENLABS_API_KEY),
+        ELEVENLABS_VOICE_ID_present: Boolean(process.env.ELEVENLABS_VOICE_ID),
       },
     });
   }
