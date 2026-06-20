@@ -61,11 +61,11 @@ async function attemptJoin(): Promise<void> {
   if (result.ok) {
     // Clear sensitive code from the URL before redirecting.
     window.history.replaceState(null, '', '/#/join');
-    // Colorful welcome wipe; navigate behind it, then it fades to reveal the
-    // student dashboard.
-    const transition = playLoginTransition();
-    window.location.hash = '/student';
-    await transition;
+    // Curtain covers first, THEN we switch to the dashboard behind it, then the
+    // curtain sweeps off to reveal it — so the page never visibly "jumps".
+    await playLoginTransition(() => {
+      window.location.hash = '/student';
+    });
   }
 }
 
