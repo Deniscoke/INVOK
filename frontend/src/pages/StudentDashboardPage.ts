@@ -14,6 +14,7 @@ import { isRealStudentAccount } from '../services/dashboardApi';
 import { fetchMyProgress, type SubmissionResult } from '../services/submissionApi';
 import { listQuests, type StudentQuest } from '../services/questStore';
 import { competencyName, strengthToLevel, levelLabel } from '../services/competencyScale';
+import { openCertificate } from '../components/Certificate';
 
 let pendingMount: (() => void) | null = null;
 
@@ -91,6 +92,7 @@ function profileCard(alias: string): string {
         <div class="muted">Pseudonymný žiak</div>
         <div class="identity__alias">${escapeHtml(alias)}</div>
       </div>
+      <button type="button" class="btn btn--ghost btn--sm" data-cert-btn style="margin-left:auto">${'\u{1F393}'} Certifikát</button>
     </div>
   </section>`;
 }
@@ -153,6 +155,9 @@ async function loadJourney(alias: string): Promise<void> {
       ${renderMyMissions(quests)}
     </div>
   </div>`;
+  slot
+    .querySelector<HTMLButtonElement>('[data-cert-btn]')
+    ?.addEventListener('click', () => openCertificate({ alias }));
 }
 
 export function StudentDashboardPage(): string {

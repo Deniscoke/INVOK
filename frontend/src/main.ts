@@ -2,6 +2,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 import './styles/login-transition.css';
 import './styles/boot.css';
+import './styles/certificate.css';
 import './styles/smarta.css';
 import { mountBootLoader } from './components/BootLoader';
 import { LandingPage } from './pages/LandingPage';
