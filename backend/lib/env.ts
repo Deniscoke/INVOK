@@ -22,6 +22,8 @@ export interface ServerEnv {
   smartaChatModel: string;
   /** OpenAI text-to-speech model (used when ElevenLabs isn't configured). */
   openaiTtsModel: string;
+  /** OpenAI TTS voice (gpt-4o-mini-tts: alloy/ash/ballad/coral/echo/fable/nova/onyx/sage/shimmer). */
+  openaiTtsVoice: string;
   /** Optional ElevenLabs provider (preferred for TTS when both are set). */
   elevenLabsApiKey: string | undefined;
   elevenLabsVoiceId: string | undefined;
@@ -65,6 +67,7 @@ export function getServerEnv(): ServerEnv {
     openaiQuestModel: env.OPENAI_QUEST_MODEL ?? 'gpt-4.1-mini',
     smartaChatModel: env.OPENAI_MODEL ?? 'gpt-4.1-mini',
     openaiTtsModel: env.OPENAI_TTS_MODEL ?? 'gpt-4o-mini-tts',
+    openaiTtsVoice: env.OPENAI_TTS_VOICE ?? 'coral',
     elevenLabsApiKey: env.ELEVENLABS_API_KEY,
     elevenLabsVoiceId: env.ELEVENLABS_VOICE_ID,
     openaiValidationProvider: env.OPENAI_VALIDATION_PROVIDER === 'openai' ? 'openai' : 'mock',

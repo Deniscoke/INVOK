@@ -183,8 +183,19 @@ async function handleSmartaTts(req: VercelRequest, res: VercelResponse): Promise
       res.status(204).end();
       return;
     }
-    const voice = typeof body.voice === 'string' && OPENAI_VOICES.includes(body.voice) ? body.voice : 'nova';
-    const speech = await client.audio.speech.create({ model: env.openaiTtsModel, voice, input: text, response_format: 'mp3' });
+    const voice =
+      typeof body.voice === 'string' && OPENAI_VOICES.includes(body.voice)
+        ? body.voice
+        : OPENAI_VOICES.includes(env.openaiTtsVoice)
+          ? env.openaiTtsVoice
+          : 'coral';
+    const speech = await client.audio.speech.create({
+      model: env.openaiTtsModel,
+      voice,
+      input: text,
+      response_format: 'mp3',
+      instructions: 'Hovor po slovensky priateľsky, vrúcne a povzbudivo, prirodzeným ľudským tempom — ako milá a trpezlivá asistentka pre žiakov základnej školy.',
+    });
     res.setHeader('X-TTS-Provider', 'openai');
     sendAudio(res, Buffer.from(await speech.arrayBuffer()));
   } catch {
