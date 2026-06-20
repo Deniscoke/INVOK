@@ -21,6 +21,7 @@ import { REVIEW_DECISIONS, type ReviewDecision } from '../../backend/validators/
 import { getTeacherSubmissions } from '../../backend/services/submissionService.js';
 import { validateQueryFilter } from '../../backend/validators/submissionValidator.js';
 import { listClassPendingQuests, reviewQuest, listQuestAttachments } from '../../backend/services/studentQuestService.js';
+import { getClassQuestionnaireStats } from '../../backend/services/questionnaireService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const segments = routeSegments(req, 'teacher');
@@ -48,6 +49,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     } catch {
       res.status(500).json({ error: 'Interná chyba servera.' });
     }
+    return;
+  }
+
+  // /api/teacher/stats — class-level questionnaire growth (input vs output).
+  if (root === 'stats') {
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', 'GET');
+      res.status(405).json({ error: 'Method Not Allowed' });
+      return;
+    }
+    const ctx = await resolveContext(req);
+    if (!isTeacherOrAdmin(ctx)) {
+      res.status(403).json({ error: 'Prístup len pre učiteľov a adminov.' });
+      return;
+    }
+    const classId = typeof req.query.classId === 'string' ? req.query.classId : undefined;
+    const result = await getClassQuestionnaireStats(ctx, classId);
+    res.status(result.ok ? 200 : (result.status ?? 500)).json(result);
     return;
   }
 

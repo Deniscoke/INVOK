@@ -9,6 +9,7 @@
  */
 import { getServerEnv, missingServerSecrets } from '../lib/env.js';
 import { verifyStudentSession } from './studentAccessService.js';
+import type { RequestContext } from '../lib/requestContext.js';
 
 export type QuestionnairePhase = 'input' | 'output';
 
@@ -157,6 +158,115 @@ export async function listMyQuestionnaires(
     return { ok: true, responses };
   } catch {
     return { ok: false, error: 'Načítanie dotazníkov zlyhalo.', status: 500 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Teacher / director aggregate — class-level growth (input vs output)
+// ---------------------------------------------------------------------------
+
+export interface ClassAreaStat {
+  id: string;
+  avgInput: number | null;
+  avgOutput: number | null;
+  growthPct: number | null;
+}
+
+export interface ClassQuestionnaireStats {
+  ok: boolean;
+  totalStudents?: number;
+  inputCount?: number;
+  outputCount?: number;
+  avgInputTotal?: number | null;
+  avgOutputTotal?: number | null;
+  areas?: ClassAreaStat[];
+  error?: string;
+  status?: number;
+}
+
+interface ResponseRow {
+  phase: string;
+  area_scores: Record<string, number> | null;
+  total_score: number | null;
+  student_access_code_id: string;
+}
+
+/** Class-level pre/post growth for the teacher's class(es). */
+export async function getClassQuestionnaireStats(ctx: RequestContext, classId?: string): Promise<ClassQuestionnaireStats> {
+  if (ctx.mode !== 'supabase_user' || (ctx.role !== 'teacher' && ctx.role !== 'admin')) {
+    return { ok: false, error: 'Iba učiteľ/admin.', status: 403 };
+  }
+  if (!isConfigured()) return { ok: false, error: 'Backend nie je nastavený.', status: 503 };
+  try {
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
+    const admin = getSupabaseAdmin();
+
+    const { data: memberships } = await admin
+      .from('class_memberships')
+      .select('class_id')
+      .eq('user_id', ctx.userId)
+      .eq('role', 'teacher');
+    let classIds = ((memberships ?? []) as Array<{ class_id: string }>).map((m) => String(m.class_id));
+    if (classId) classIds = classIds.filter((id) => id === classId);
+    const emptyAreas = AREAS.map((id) => ({ id, avgInput: null, avgOutput: null, growthPct: null }));
+    if (classIds.length === 0) {
+      return { ok: true, totalStudents: 0, inputCount: 0, outputCount: 0, avgInputTotal: null, avgOutputTotal: null, areas: emptyAreas };
+    }
+
+    const { count: totalStudents } = await admin
+      .from('student_access_codes')
+      .select('id', { count: 'exact', head: true })
+      .in('class_id', classIds);
+
+    const { data } = await admin
+      .from('questionnaire_responses')
+      .select('phase, area_scores, total_score, student_access_code_id')
+      .in('class_id', classIds);
+    const rows = (data ?? []) as ResponseRow[];
+
+    const sums: Record<'input' | 'output', Record<string, number>> = { input: {}, output: {} };
+    const counts: Record<'input' | 'output', number> = { input: 0, output: 0 };
+    for (const a of AREAS) {
+      sums.input[a] = 0;
+      sums.output[a] = 0;
+    }
+    let totalIn = 0;
+    let totalOut = 0;
+    const inputStudents = new Set<string>();
+    const outputStudents = new Set<string>();
+
+    for (const r of rows) {
+      const bucket: 'input' | 'output' = r.phase === 'output' ? 'output' : 'input';
+      counts[bucket] += 1;
+      if (bucket === 'input') {
+        inputStudents.add(r.student_access_code_id);
+        totalIn += Number(r.total_score) || 0;
+      } else {
+        outputStudents.add(r.student_access_code_id);
+        totalOut += Number(r.total_score) || 0;
+      }
+      for (const a of AREAS) sums[bucket][a] += Number(r.area_scores?.[a] ?? 0);
+    }
+
+    const avg = (sum: number, count: number): number | null => (count > 0 ? Math.round(sum / count) : null);
+    const areas: ClassAreaStat[] = AREAS.map((a) => {
+      const avgInput = avg(sums.input[a], counts.input);
+      const avgOutput = avg(sums.output[a], counts.output);
+      const growthPct = avgInput != null && avgOutput != null && avgInput > 0 ? Math.round(((avgOutput - avgInput) / avgInput) * 100) : null;
+      return { id: a, avgInput, avgOutput, growthPct };
+    });
+
+    return {
+      ok: true,
+      totalStudents: totalStudents ?? 0,
+      inputCount: inputStudents.size,
+      outputCount: outputStudents.size,
+      avgInputTotal: avg(totalIn, counts.input),
+      avgOutputTotal: avg(totalOut, counts.output),
+      areas,
+    };
+  } catch {
+    return { ok: false, error: 'Načítanie štatistík zlyhalo.', status: 500 };
   }
 }
 

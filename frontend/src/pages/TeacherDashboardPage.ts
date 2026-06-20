@@ -14,6 +14,10 @@ import {
   mountPendingQuestApprovalsPanel,
 } from '../components/dashboard/PendingQuestApprovalsPanel';
 import {
+  QuestionnaireGrowthPanel,
+  mountQuestionnaireGrowthPanel,
+} from '../components/dashboard/QuestionnaireGrowthPanel';
+import {
   fetchDashboard,
   fetchClasses,
   isRealTeacherAccount,
@@ -122,6 +126,7 @@ export function TeacherDashboardPage(): string {
       <div class="section-title"><h3 style="margin:0">Kompetenčný progres</h3></div>
       <div id="dashboard-competencies"></div>
     </div>
+    ${QuestionnaireGrowthPanel()}
   </section>
 
   <div style="margin-top:var(--space-6)">${realAccountWelcome()}</div>
@@ -235,6 +240,7 @@ export function mountTeacherDashboard(): void {
   // accounts. The mount call is safe in either branch — it short-circuits
   // when the container doesn't exist.
   mountPendingQuestApprovalsPanel();
+  void mountQuestionnaireGrowthPanel();
   const reviews = getPendingReviews();
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-review-open]'))) {
     button.addEventListener('click', () => {
