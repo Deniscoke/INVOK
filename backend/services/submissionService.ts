@@ -186,6 +186,13 @@ export async function getStudentProgress(ctx: RequestContext): Promise<{
   competencyProgress: { competencyId: string; xp: number; level: number; mastery: number }[];
 }> {
   if (ctx.mode === 'anonymous') return { totalXp: 0, level: 1, competencyProgress: [] };
+  // Pseudonymous students have no profiles/user_progress row (those are keyed by
+  // auth user). Compute their journey live from their own submissions instead.
+  if (ctx.mode === 'student_session') {
+    return isConfigured()
+      ? dbGetSessionProgress(ctx.studentAccessCodeId)
+      : { totalXp: 0, level: 1, competencyProgress: [] };
+  }
   if (isConfigured()) return dbGetProgress(ctx);
   return {
     totalXp: 480,
@@ -487,6 +494,53 @@ async function dbGetTeacherList(
     return (data as unknown as Record<string, unknown>[]).map(rowToSubmission);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Live progress for a pseudonymous student: aggregated from their own
+ * submissions (final XP) and the AI's detected competencies. No profile tables.
+ */
+async function dbGetSessionProgress(accessCodeId: string): Promise<{
+  totalXp: number;
+  level: number;
+  competencyProgress: { competencyId: string; xp: number; level: number; mastery: number }[];
+}> {
+  try {
+    const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from('submissions')
+      .select('xp_awarded, status, ai_evaluations(score, detected_competencies)')
+      .eq('student_access_code_id', accessCodeId);
+    const rows = (data ?? []) as Record<string, unknown>[];
+
+    let totalXp = 0;
+    const comp: Record<string, { xp: number; mastery: number }> = {};
+    for (const r of rows) {
+      const xp = Number(r.xp_awarded ?? 0);
+      totalXp += xp;
+      const ev = r.ai_evaluations as Record<string, unknown> | undefined;
+      const detected = (ev?.detected_competencies as Array<{ id: string; strength: number }> | undefined) ?? [];
+      if (xp > 0 && detected.length > 0) {
+        const share = xp / detected.length;
+        for (const d of detected) {
+          const cur = comp[d.id] ?? { xp: 0, mastery: 0 };
+          cur.xp += share;
+          cur.mastery = Math.max(cur.mastery, Number(d.strength ?? 0));
+          comp[d.id] = cur;
+        }
+      }
+    }
+    const competencyProgress = Object.entries(comp).map(([competencyId, v]) => ({
+      competencyId,
+      xp: Math.round(v.xp),
+      level: levelForXp(Math.round(v.xp)),
+      mastery: Math.round(v.mastery * 100) / 100,
+    }));
+    return { totalXp, level: levelForXp(totalXp), competencyProgress };
+  } catch {
+    return { totalXp: 0, level: 1, competencyProgress: [] };
   }
 }
 

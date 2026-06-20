@@ -11,7 +11,9 @@ import {
 } from '../services/mockDataService';
 import { getSnapshot } from '../services/authService';
 import { isRealStudentAccount } from '../services/dashboardApi';
-import type { SubmissionResult } from '../services/submissionApi';
+import { fetchMyProgress, type SubmissionResult } from '../services/submissionApi';
+import { listQuests, type StudentQuest } from '../services/questStore';
+import { competencyName, strengthToLevel, levelLabel } from '../services/competencyScale';
 
 let pendingMount: (() => void) | null = null;
 
@@ -80,13 +82,87 @@ function realStudentEmptyState(alias: string): string {
   </section>`;
 }
 
+function profileCard(alias: string): string {
+  return `
+  <section class="card">
+    <div class="identity">
+      ${Mascot({ size: 72 })}
+      <div>
+        <div class="muted">Pseudonymný žiak</div>
+        <div class="identity__alias">${escapeHtml(alias)}</div>
+      </div>
+    </div>
+  </section>`;
+}
+
+const JOURNEY_STATE_LABEL: Record<string, { label: string; cls: string }> = {
+  pending_approval: { label: 'čaká na učiteľa', cls: 'chip--warm' },
+  changes_requested: { label: 'na úpravu', cls: 'chip--warm' },
+  approved: { label: 'môžeš odovzdať', cls: 'chip--accent' },
+  submitted: { label: 'odovzdané', cls: 'chip--accent' },
+  completed: { label: 'hotovo \u{1F3C6}', cls: 'chip--muted' },
+};
+
+/** Per-competency 1–5 levels — the measurable, child-friendly view. */
+function renderCompetencyLevels(progress: { competencyProgress: { competencyId: string; mastery: number }[] }): string {
+  if (progress.competencyProgress.length === 0) return '';
+  const rows = [...progress.competencyProgress]
+    .sort((a, b) => b.mastery - a.mastery)
+    .map((p) => {
+      const lvl = strengthToLevel(p.mastery);
+      return `<li style="display:flex;justify-content:space-between;gap:var(--space-3);padding:4px 0">
+        <span>${escapeHtml(competencyName(p.competencyId))}</span>
+        <strong>${lvl}/5 <span class="muted" style="font-weight:normal">(${levelLabel(lvl)})</span></strong></li>`;
+    })
+    .join('');
+  return `<div class="card"><h3 style="margin-top:0">${'\u{1F3AF}'} Tvoje kompetencie (1–5)</h3><ul style="list-style:none;margin:0;padding:0">${rows}</ul></div>`;
+}
+
+function renderMyMissions(quests: StudentQuest[]): string {
+  const relevant = quests.filter((q) => q.state !== 'draft' && q.state !== 'rejected');
+  const rows = relevant
+    .map((q) => {
+      const badge = JOURNEY_STATE_LABEL[q.state] ?? { label: q.state, cls: 'chip--muted' };
+      return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)">
+        <strong style="min-width:0">${escapeHtml(q.title)}</strong>
+        <span class="chip ${badge.cls}">${badge.label}</span></div>`;
+    })
+    .join('');
+  return `<section><div class="section-title"><h2 style="margin:0">Tvoje misie</h2><a class="muted" href="#/quests">všetky &rsaquo;</a></div>
+    <div class="stack" style="gap:var(--space-3)">${rows || '<p class="muted">Zatiaľ žiadne. <a href="#/quests">Začni misiou</a>.</p>'}</div></section>`;
+}
+
+async function loadJourney(alias: string): Promise<void> {
+  const slot = document.querySelector<HTMLElement>('#journey-slot');
+  if (!slot) return;
+  const [progress, quests] = await Promise.all([fetchMyProgress(), listQuests()]);
+  const started = quests.filter((q) => q.state !== 'draft' && q.state !== 'rejected');
+  const hasAnything = progress.totalXp > 0 || progress.competencyProgress.length > 0 || started.length > 0;
+  if (!hasAnything) {
+    slot.innerHTML = realStudentEmptyState(alias);
+    return;
+  }
+  slot.innerHTML = `
+  ${profileCard(alias)}
+  <div class="grid grid--2" style="margin-top:var(--space-5);gap:var(--space-4)">
+    <div class="stack">
+      ${ProgressSummary(progress)}
+      ${renderCompetencyLevels(progress)}
+    </div>
+    <div class="stack">
+      ${renderMyMissions(quests)}
+    </div>
+  </div>`;
+}
+
 export function StudentDashboardPage(): string {
   const authUser = getSnapshot().user;
   const realStudent = isRealStudentAccount();
 
   if (realStudent) {
-    pendingMount = null;
-    return realStudentEmptyState(authUser?.displayName ?? 'žiak');
+    const alias = authUser?.displayName ?? 'žiak';
+    pendingMount = () => { void loadJourney(alias); };
+    return `<div id="journey-slot"><p class="muted">Načítavam tvoju cestu…</p></div>`;
   }
 
   const student = getStudent();
