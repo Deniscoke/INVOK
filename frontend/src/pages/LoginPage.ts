@@ -4,15 +4,8 @@ import { isSupabaseConfigured } from '../services/supabaseClient';
 export function LoginPage(): string {
   return `
   <section class="auth-page">
-    <h1>Prihlásenie</h1>
-    <p class="muted">Učitelia a admini sa prihlasujú e-mailom. Žiaci sa pripájajú
-      <a href="#/join">kódom triedy</a> bez e-mailu.</p>
-
-    <div class="card" style="border-left:4px solid var(--color-accent, #6366f1);background:var(--tint-accent, #eef2ff);margin-bottom:var(--space-4)">
-      <strong>Si žiak?</strong>
-      <p class="muted" style="margin:6px 0 var(--space-3)">Žiaci nepoužívajú e-mail. Pripoj sa svojou prezývkou a kódom od učiteľa.</p>
-      <a class="btn btn--primary" href="#/join">Pripojiť sa kódom triedy</a>
-    </div>
+    <h1>Prihlásenie učiteľa</h1>
+    <p class="muted">Učitelia a admini sa prihlasujú e-mailom.</p>
 
     ${isSupabaseConfigured ? '<p class="muted">Nový učiteľ? Najprv si vytvor účet v záložke <strong>Registrácia</strong>, potom pokračuj do <a href="#/pilot">pilot setupu</a>.</p>' : ''}
 
