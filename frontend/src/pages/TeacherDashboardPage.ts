@@ -240,7 +240,7 @@ export function mountTeacherDashboard(): void {
   // accounts. The mount call is safe in either branch — it short-circuits
   // when the container doesn't exist.
   mountPendingQuestApprovalsPanel();
-  void mountQuestionnaireGrowthPanel();
+  void mountQuestionnaireGrowthPanel(dashboardState.classId);
   const reviews = getPendingReviews();
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-review-open]'))) {
     button.addEventListener('click', () => {
@@ -325,6 +325,7 @@ async function loadSchoolDashboard(): Promise<void> {
     mountDashboardFilters(async (next) => {
       dashboardState = next;
       renderDashboard(await fetchDashboard(dashboardState));
+      void mountQuestionnaireGrowthPanel(dashboardState.classId);
     });
   }
   const exportSlot = document.querySelector('#dashboard-export');
