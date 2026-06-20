@@ -150,7 +150,7 @@ export async function openPortfolio(opts: PortfolioOptions): Promise<void> {
   const alias = (opts.alias || '').trim() || 'žiak';
 
   const overlay = document.createElement('div');
-  overlay.className = 'invok-portfolio-overlay';
+  overlay.className = 'invok-portfolio-overlay invok-printable';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-label', 'Moje INVOK portfólio');
 

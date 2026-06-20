@@ -208,3 +208,34 @@ main { padding: var(--space-6) 0 var(--space-8); }
 .footer-links a { color: var(--color-muted); text-decoration: none; font-weight: 600; font-size: var(--fs-xs); }
 .footer-links a:hover { color: var(--color-text); text-decoration: underline; text-underline-offset: 3px; }
 .footer-fine { margin: 0; font-size: var(--fs-xs); color: var(--color-muted); }
+
+/* Shared print isolation for printable overlays (certificate / portfolio /
+   parent report). ONE rule keyed on .invok-printable so the per-overlay rules
+   can't fight each other (which printed a blank page). @page margin:0 drops the
+   browser's default header/footer; padding on the overlay insets the content. */
+@media print {
+  body > *:not(.invok-printable) { display: none !important; }
+  body::before { display: none !important; }
+  .invok-printable {
+    position: static !important;
+    display: block !important;
+    padding: 12mm !important;
+    background: #fff !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+  }
+  .invok-cert-overlay__bar,
+  .invok-portfolio-overlay__bar,
+  .invok-parent-overlay__bar { display: none !important; }
+  .invok-cert,
+  .invok-portfolio,
+  .invok-parent {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+  }
+  @page { margin: 0; }
+}

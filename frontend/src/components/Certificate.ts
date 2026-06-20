@@ -91,7 +91,7 @@ export function openCertificate(opts: CertificateOptions): void {
   const dateText = opts.dateText ?? todaySk();
 
   const overlay = document.createElement('div');
-  overlay.className = 'invok-cert-overlay';
+  overlay.className = 'invok-cert-overlay invok-printable';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Certifikát absolvovania');

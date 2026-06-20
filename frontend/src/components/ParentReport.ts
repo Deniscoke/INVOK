@@ -143,7 +143,7 @@ export async function openParentReport(opts: ParentReportOptions): Promise<void>
   const alias = (opts.alias || '').trim() || 'žiak';
 
   const overlay = document.createElement('div');
-  overlay.className = 'invok-parent-overlay';
+  overlay.className = 'invok-parent-overlay invok-printable';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-label', 'Report pre rodičov');
 

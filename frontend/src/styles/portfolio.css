@@ -58,11 +58,5 @@
 .pf-files a:hover { text-decoration: underline; }
 
 @media print {
-  body > *:not(.invok-portfolio-overlay) { display: none !important; }
-  body::before { display: none !important; }
-  .invok-portfolio-overlay { position: static !important; display: block !important; padding: 0 !important; background: #fff !important; backdrop-filter: none !important; }
-  .invok-portfolio-overlay__bar { display: none !important; }
-  .invok-portfolio { width: 100% !important; max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; }
   .pf-card, .pf-badge, .pf-section { break-inside: avoid; }
-  @page { size: A4 portrait; margin: 14mm; }
 }
