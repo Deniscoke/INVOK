@@ -43,7 +43,7 @@ export const ACADEMY_MODULES: readonly AcademyModule[] = [
         id: 'm1l1',
         title: 'Prečo niektorí menia svet a iní sa len sťažujú?',
         description: 'Čo je problém, čo je príležitosť a ako vznikajú dobré nápady. So Smartou ako sprievodkyňou.',
-        videoUrl: `${SUPABASE_PUBLIC}/modul1/lekcia1.mp4`,
+        videoUrl: `${SUPABASE_PUBLIC}/modul1/lekcia1-720.mp4`,
         durationLabel: '1:02',
         xp: 30,
         quiz: [

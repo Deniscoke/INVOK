@@ -46,7 +46,7 @@ function panelHtml(lesson: AcademyLesson): string {
       <button type="button" class="smarta-icon-btn ac-close" aria-label="Zavrieť">✕</button>
     </header>
     <div class="ac-body">
-      <video class="ac-video" controls preload="metadata" playsinline src="${esc(lesson.videoUrl ?? '')}"></video>
+      <video class="ac-video" controls preload="auto" playsinline src="${esc(lesson.videoUrl ?? '')}"></video>
       <p class="ac-desc">${esc(lesson.description)}</p>
       <div class="ac-quiz">
         <h3 style="margin:0 0 var(--space-2)">Krátky kvíz</h3>
