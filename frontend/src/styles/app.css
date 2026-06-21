@@ -5,6 +5,11 @@
 *::before,
 *::after { box-sizing: border-box; }
 
+/* The `hidden` attribute must always win, even over a component's display rule
+   (e.g. an absolutely-positioned result overlay with display:grid). Without this
+   such overlays stay visible, covering and blocking the content beneath. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
