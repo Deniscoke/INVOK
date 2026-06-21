@@ -6,11 +6,13 @@ import './styles/certificate.css';
 import './styles/questionnaire.css';
 import './styles/portfolio.css';
 import './styles/parent-report.css';
+import './styles/academy.css';
 import './styles/smarta.css';
 import { mountBootLoader } from './components/BootLoader';
 import { LandingPage } from './pages/LandingPage';
 import { StudentDashboardPage, mountStudentDashboard } from './pages/StudentDashboardPage';
 import { StudentQuestsPage, mountStudentQuestsPage } from './pages/StudentQuestsPage';
+import { AcademyPage, mountAcademyPage } from './pages/AcademyPage';
 import { TeacherDashboardPage, mountTeacherDashboard } from './pages/TeacherDashboardPage';
 import { LoginPage, mountLoginPage } from './pages/LoginPage';
 import { StudentJoinPage, mountStudentJoinPage } from './pages/StudentJoinPage';
@@ -32,6 +34,7 @@ const routes: Route[] = [
   { path: '/', label: 'Domov', render: LandingPage },
   { path: '/student', label: 'Žiak', render: StudentDashboardPage, mount: mountStudentDashboard },
   { path: '/quests', label: 'Misie', render: StudentQuestsPage, mount: mountStudentQuestsPage },
+  { path: '/akademia', label: 'Akadémia', render: AcademyPage, mount: mountAcademyPage },
   { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, mount: mountTeacherDashboard },
   { path: '/login', label: 'Prihlásenie', render: LoginPage, mount: mountLoginPage },
   { path: '/join', label: 'Pripojiť sa', render: StudentJoinPage, mount: mountStudentJoinPage },
@@ -75,7 +78,8 @@ function navItemsFor(snapshot: ReturnType<typeof getSnapshot>): NavItem[] {
   if (role === 'student') {
     return [
       { path: '/student', label: 'Moja cesta' },
-      { path: '/quests', label: 'Misie' },
+      { path: '/quests', label: 'Projektové výzvy' },
+      { path: '/akademia', label: 'Akadémia' },
     ];
   }
   if (role === 'teacher' || role === 'admin') {

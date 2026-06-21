@@ -1,0 +1,64 @@
+/* ============================================================================
+   Akadémia — lesson overlay (video + quiz). Uses design tokens.
+   ============================================================================ */
+.academy-lesson-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10042;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px;
+  background: rgba(16, 18, 34, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.academy-lesson__panel {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.ac-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.ac-head strong { font-size: var(--fs-md); }
+.ac-close { background: var(--color-surface-2); color: var(--color-text); flex: 0 0 auto; }
+
+.ac-body { overflow-y: auto; padding: var(--space-4) var(--space-5); }
+.ac-video { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--radius-md); display: block; }
+.ac-desc { margin: var(--space-3) 0 var(--space-4); font-size: var(--fs-sm); color: var(--color-muted); }
+
+.ac-quiz h3 { font-size: var(--fs-md); }
+.ac-q { padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.ac-q__text { margin: 0 0 8px; font-size: var(--fs-sm); font-weight: 600; }
+.ac-opt { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 6px; cursor: pointer; font-size: var(--fs-sm); }
+.ac-opt:hover { border-color: var(--color-primary); }
+.ac-opt input { accent-color: var(--color-primary); }
+.ac-opt input:checked ~ span { color: var(--color-primary-strong); font-weight: 600; }
+
+.ac-msg { font-size: var(--fs-xs); color: var(--color-danger); min-height: 1em; margin: var(--space-2) 0; }
+.ac-submit { margin-top: var(--space-2); }
+
+.ac-result {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgba(255, 255, 255, 0.96);
+}
+.ac-result__card { text-align: center; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ac-result__emoji { font-size: 50px; line-height: 1; }
+.ac-xp { font-size: var(--fs-2xl); font-weight: 900; background: var(--gradient-xp); -webkit-background-clip: text; background-clip: text; color: transparent; }

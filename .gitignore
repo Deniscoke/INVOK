@@ -26,3 +26,6 @@ Thumbs.db
 .idea/
 .vscode/
 /SMARTA/
+
+# Local video lesson source files (uploaded to Supabase Storage, never commit)
+invokvideolekcie/
