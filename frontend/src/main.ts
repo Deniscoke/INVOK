@@ -17,6 +17,7 @@ import { TeacherDashboardPage, mountTeacherDashboard } from './pages/TeacherDash
 import { LoginPage, mountLoginPage } from './pages/LoginPage';
 import { StudentJoinPage, mountStudentJoinPage } from './pages/StudentJoinPage';
 import { PilotSetupPage, mountPilotSetup } from './pages/PilotSetupPage';
+import { LegalPage } from './pages/LegalPage';
 import { AuthStatus } from './components/AuthStatus';
 import { mountSmarta } from './components/smarta/Smarta';
 import { SiteFooter } from './components/SiteFooter';
@@ -39,6 +40,7 @@ const routes: Route[] = [
   { path: '/login', label: 'Prihlásenie', render: LoginPage, mount: mountLoginPage },
   { path: '/join', label: 'Pripojiť sa', render: StudentJoinPage, mount: mountStudentJoinPage },
   { path: '/pilot', label: 'Pilot', render: PilotSetupPage, mount: mountPilotSetup },
+  { path: '/pristupnost', label: 'Prístupnosť', render: LegalPage },
 ];
 
 function currentPath(): string {

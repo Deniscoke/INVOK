@@ -42,3 +42,28 @@ export async function fetchQuestionnaireStats(classId?: string): Promise<ClassQu
     return null;
   }
 }
+
+export interface ClassStudent {
+  accessCodeId: string;
+  pseudonym: string;
+  totalXp: number;
+  level: number;
+  competencies: { competencyId: string; mastery: number }[];
+  questionnaireInput: number | null;
+  questionnaireOutput: number | null;
+  academyDone: number;
+  questsTotal: number;
+  questsCompleted: number;
+}
+
+export async function fetchClassStudents(classId?: string): Promise<ClassStudent[]> {
+  try {
+    const qs = classId ? `?classId=${encodeURIComponent(classId)}` : '';
+    const res = await fetch(`/api/teacher/students${qs}`, { headers: await authHeaders() });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { ok?: boolean; students?: ClassStudent[] };
+    return data.ok && Array.isArray(data.students) ? data.students : [];
+  } catch {
+    return [];
+  }
+}

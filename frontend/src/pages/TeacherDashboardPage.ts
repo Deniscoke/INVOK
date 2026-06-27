@@ -18,6 +18,10 @@ import {
   mountQuestionnaireGrowthPanel,
 } from '../components/dashboard/QuestionnaireGrowthPanel';
 import {
+  ClassStudentsPanel,
+  mountClassStudentsPanel,
+} from '../components/dashboard/ClassStudentsPanel';
+import {
   fetchDashboard,
   fetchClasses,
   isRealTeacherAccount,
@@ -127,6 +131,7 @@ export function TeacherDashboardPage(): string {
       <div id="dashboard-competencies"></div>
     </div>
     ${QuestionnaireGrowthPanel()}
+    ${ClassStudentsPanel()}
   </section>
 
   <div style="margin-top:var(--space-6)">${realAccountWelcome()}</div>
@@ -241,6 +246,7 @@ export function mountTeacherDashboard(): void {
   // when the container doesn't exist.
   mountPendingQuestApprovalsPanel();
   void mountQuestionnaireGrowthPanel(dashboardState.classId);
+  void mountClassStudentsPanel(dashboardState.classId);
   const reviews = getPendingReviews();
   for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>('[data-review-open]'))) {
     button.addEventListener('click', () => {
@@ -326,6 +332,7 @@ async function loadSchoolDashboard(): Promise<void> {
       dashboardState = next;
       renderDashboard(await fetchDashboard(dashboardState));
       void mountQuestionnaireGrowthPanel(dashboardState.classId);
+      void mountClassStudentsPanel(dashboardState.classId);
     });
   }
   const exportSlot = document.querySelector('#dashboard-export');

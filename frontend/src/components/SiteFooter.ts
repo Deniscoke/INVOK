@@ -11,14 +11,16 @@ import { euEmblem, FUNDING_STATEMENT, PARTNERS } from './brand';
 const LEGAL: ReadonlyArray<{ href: string; label: string }> = [
   { href: 'https://invok.pscno.sk/ochrana-osobnych-udajov', label: 'Ochrana osobných údajov' },
   { href: 'https://invok.pscno.sk/podmienky-pouzivania', label: 'Podmienky používania' },
-  { href: 'https://invok.pscno.sk/pristupnost', label: 'Vyhlásenie o prístupnosti' },
+  { href: '#/pristupnost', label: 'Vyhlásenie o prístupnosti' },
   { href: 'https://invok.pscno.sk/kontakt', label: 'Kontakt' },
 ];
 
 export function SiteFooter(): string {
   const partners = PARTNERS.map((p) => `<span class="footer-wm">${p}</span>`).join('');
-  const links = LEGAL.map(
-    (l) => `<a href="${l.href}" target="_blank" rel="noopener noreferrer">${l.label}</a>`,
+  const links = LEGAL.map((l) =>
+    l.href.startsWith('#')
+      ? `<a href="${l.href}">${l.label}</a>`
+      : `<a href="${l.href}" target="_blank" rel="noopener noreferrer">${l.label}</a>`,
   ).join('');
 
   return `
