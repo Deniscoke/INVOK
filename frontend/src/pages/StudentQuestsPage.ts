@@ -28,6 +28,7 @@ import {
 } from '../services/questStore';
 import { submitSolution, fetchMySubmissions, type SubmissionResult, type AiEvaluation } from '../services/submissionApi';
 import { uploadQuestFile, listMyQuestFiles, ATTACH_MAX_FILES, type UploadedAttachment } from '../services/uploadApi';
+import { fetchGallery, type GalleryProject } from '../services/galleryApi';
 import { getCompetencies } from '../services/mockDataService';
 
 let pendingMount: (() => void) | null = null;
@@ -307,6 +308,7 @@ export function StudentQuestsPage(): string {
     bindAiForm();
     bindSubmitForms();
     bindMyFilesButtons();
+    void loadGallery();
   };
 
   return `
@@ -350,7 +352,35 @@ export function StudentQuestsPage(): string {
   <section style="margin-top:var(--space-6)">
     <div class="section-title"><h2 style="margin:0">Pridaj novú misiu</h2></div>
     ${creationPanels(overLimit)}
+  </section>
+
+  <section style="margin-top:var(--space-6)">
+    <div class="section-title"><h2 style="margin:0">${'\u{1F3A8}'} Ako žiaci menia svoje školy</h2></div>
+    <p class="muted" style="margin-top:0">Galéria dokončených projektov zo zapojených škôl — inšpiruj sa, čo všetko sa dá zmeniť.</p>
+    <div id="quest-gallery"><p class="muted">Načítavam galériu…</p></div>
   </section>`;
+}
+
+/** Public gallery of teacher-published completed projects (inspiration). */
+function galleryCard(p: GalleryProject): string {
+  const where = `${escapeHtml(p.className)}${p.grade != null ? ` (${p.grade}. roč.)` : ''} · ${escapeHtml(p.schoolName)}${p.region ? ` · ${escapeHtml(p.region)}` : ''}`;
+  return `<article class="card" style="border-left:4px solid var(--color-warm)">
+    <strong>${escapeHtml(p.title)}</strong>
+    ${p.goal ? `<p class="muted" style="margin:6px 0 0;font-size:var(--fs-sm)">${escapeHtml(p.goal)}</p>` : ''}
+    ${p.affectedGroup ? `<p class="muted" style="margin:6px 0 0;font-size:var(--fs-xs)"><strong>Komu pomohol:</strong> ${escapeHtml(p.affectedGroup)}</p>` : ''}
+    <div class="muted" style="margin-top:var(--space-2);font-size:var(--fs-xs)">${'\u{2B50}'} ${escapeHtml(p.pseudonym)} · ${where}</div>
+  </article>`;
+}
+
+async function loadGallery(): Promise<void> {
+  const slot = document.querySelector<HTMLElement>('#quest-gallery');
+  if (!slot) return;
+  const projects = await fetchGallery();
+  if (projects.length === 0) {
+    slot.innerHTML = `<p class="muted">Galéria sa ešte len plní — dokonči svoj projekt a možno tu bude ako prvý! ${'\u{2B50}'}</p>`;
+    return;
+  }
+  slot.innerHTML = `<div class="grid grid--cards">${projects.map(galleryCard).join('')}</div>`;
 }
 
 function readVal(selector: string): string {

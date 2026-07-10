@@ -23,6 +23,7 @@ import { validateQueryFilter } from '../../backend/validators/submissionValidato
 import { listClassPendingQuests, reviewQuest, listQuestAttachments } from '../../backend/services/studentQuestService.js';
 import { getClassQuestionnaireStats } from '../../backend/services/questionnaireService.js';
 import { getClassStudents } from '../../backend/services/classStudentsService.js';
+import { setGalleryPublished, listCompletedForCuration } from '../../backend/services/galleryService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const segments = routeSegments(req, 'teacher');
@@ -50,6 +51,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     } catch {
       res.status(500).json({ error: 'Interná chyba servera.' });
     }
+    return;
+  }
+
+  // /api/teacher/gallery — school-projects gallery curation.
+  //   GET  → completed quests of the teacher's class(es) with publish state
+  //   POST → { questId, publish } zaradiť/odobrať z galérie
+  if (root === 'gallery') {
+    const ctx = await resolveContext(req);
+    if (!isTeacherOrAdmin(ctx)) {
+      res.status(403).json({ error: 'Prístup len pre učiteľov a adminov.' });
+      return;
+    }
+    if (req.method === 'GET') {
+      const classId = typeof req.query.classId === 'string' ? req.query.classId : undefined;
+      const result = await listCompletedForCuration(ctx, classId);
+      res.status(result.ok ? 200 : (result.status ?? 500)).json(result);
+      return;
+    }
+    if (req.method === 'POST') {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const result = await setGalleryPublished(ctx, String(body.questId ?? ''), body.publish === true);
+      res.status(result.ok ? 200 : (result.status ?? 500)).json(result);
+      return;
+    }
+    res.setHeader('Allow', 'GET, POST');
+    res.status(405).json({ error: 'Method Not Allowed' });
     return;
   }
 

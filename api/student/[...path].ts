@@ -25,6 +25,7 @@ import {
 import { generateQuest } from '../../backend/services/questGeneratorService.js';
 import { saveQuestionnaire, listMyQuestionnaires } from '../../backend/services/questionnaireService.js';
 import { completeLesson, listMyAcademy } from '../../backend/services/academyService.js';
+import { listGallery } from '../../backend/services/galleryService.js';
 import { routeSegments } from '../../backend/lib/routePath.js';
 import { createQuestUploadUrl, listQuestFiles, isAllowedAttachmentType, ATTACH_MAX_FILE_BYTES } from '../../backend/lib/storage.js';
 
@@ -116,6 +117,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
     res.status(200).json({ ok: true, ...signed });
+    return;
+  }
+
+  // GET /api/student/gallery — browse the school-projects gallery (inspiration).
+  if (route === 'gallery') {
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', 'GET');
+      res.status(405).json({ error: 'Method Not Allowed' });
+      return;
+    }
+    const token = bearerToken(req);
+    if (!token) {
+      res.status(401).json({ ok: false, error: 'Chýba študentský session token.' });
+      return;
+    }
+    const session = await verifyStudentSession(token);
+    if (!session.valid) {
+      res.status(401).json({ ok: false, error: 'Neplatná študentská session.' });
+      return;
+    }
+    const grade = typeof req.query.grade === 'string' && req.query.grade ? Number(req.query.grade) : undefined;
+    const result = await listGallery({
+      region: typeof req.query.region === 'string' && req.query.region ? req.query.region : undefined,
+      grade: Number.isFinite(grade) ? grade : undefined,
+    });
+    res.status(result.ok ? 200 : (result.status ?? 500)).json(result);
     return;
   }
 
