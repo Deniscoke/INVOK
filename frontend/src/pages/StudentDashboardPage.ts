@@ -18,6 +18,7 @@ import { openCertificate } from '../components/Certificate';
 import { openPortfolio } from '../components/Portfolio';
 import { openParentReport } from '../components/ParentReport';
 import { computeModuleBadges, earnedBadgeCount } from '../services/moduleBadges';
+import { moduleLabel } from '../services/academyContent';
 import { openQuestionnaire } from '../components/Questionnaire';
 import { fetchMyQuestionnaires } from '../services/questionnaireApi';
 
@@ -62,23 +63,23 @@ function realStudentEmptyState(alias: string): string {
       <span class="chip chip--accent">nový účet</span>
     </div>
     <p class="muted" style="margin-top:var(--space-3)">
-      Tu zatiaľ nemáš žiadne XP, odznaky ani aktívne misie — všetko sa odomyká postupne,
-      keď navrhneš alebo splníš misiu schválenú učiteľom.
+      Tu zatiaľ nemáš žiadne XP, odznaky ani aktívne výzvy — všetko sa odomyká postupne,
+      keď navrhneš alebo splníš výzvu schválenú učiteľom.
     </p>
 
     <div class="grid grid--2" style="margin-top:var(--space-4);gap:var(--space-4)">
       <div class="card" style="background:var(--color-surface, #fff);border-left:3px solid var(--color-success)">
-        <h3 style="margin-top:0">${'\u2728'} Navrhni si misiu</h3>
+        <h3 style="margin-top:0">${'\u2728'} Navrhni si výzvu</h3>
         <p class="muted" style="font-size:var(--fs-sm)">
           Popíš problém vo svojej škole / komunite a navrhni krok, ktorý urobíš.
           Učiteľ ti návrh potvrdí a získaš predbežné XP.
         </p>
-        <a class="btn btn--primary" href="#/quests">Otvoriť návrhy misií</a>
+        <a class="btn btn--primary" href="#/quests">Otvoriť návrhy výziev</a>
       </div>
       <div class="card" style="background:var(--color-surface, #fff);border-left:3px solid var(--color-accent)">
-        <h3 style="margin-top:0">${'\u{1F916}'} Nechaj AI vygenerovať misiu</h3>
+        <h3 style="margin-top:0">${'\u{1F916}'} Nechaj AI vygenerovať výzvu</h3>
         <p class="muted" style="font-size:var(--fs-sm)">
-          AI ti pripraví návrh misie v súlade s INVOK cieľmi a ŠVP ZV. Učiteľ ho potvrdí
+          AI ti pripraví návrh výzvy v súlade s INVOK cieľmi a ŠVP ZV. Učiteľ ho potvrdí
           alebo upraví, a potom môžeš odovzdať.
         </p>
         <a class="btn btn--ghost" href="#/quests?source=ai">Vyžiadať návrh od AI</a>
@@ -86,7 +87,7 @@ function realStudentEmptyState(alias: string): string {
     </div>
 
     <p class="muted" style="margin-top:var(--space-4);font-size:var(--fs-xs)">
-      Limit: max <strong>5 aktívnych misií</strong> naraz. Nepoužité môžeš zmazať.
+      Limit: max <strong>5 aktívnych výziev</strong> naraz. Nepoužité môžeš zmazať.
     </p>
   </section>`;
 }
@@ -199,12 +200,12 @@ function renderMyMissions(quests: StudentQuest[]): string {
     .map((q) => {
       const badge = JOURNEY_STATE_LABEL[q.state] ?? { label: q.state, cls: 'chip--muted' };
       return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)">
-        <strong style="min-width:0">${escapeHtml(q.title)}</strong>
+        <strong style="min-width:0">${moduleLabel(q.moduleId) ? `${moduleLabel(q.moduleId)!.split(' ')[0]} ` : ''}${escapeHtml(q.title)}</strong>
         <span class="chip ${badge.cls}">${badge.label}</span></div>`;
     })
     .join('');
-  return `<section><div class="section-title"><h2 style="margin:0">Tvoje misie</h2><a class="muted" href="#/quests">všetky &rsaquo;</a></div>
-    <div class="stack" style="gap:var(--space-3)">${rows || '<p class="muted">Zatiaľ žiadne. <a href="#/quests">Začni misiou</a>.</p>'}</div></section>`;
+  return `<section><div class="section-title"><h2 style="margin:0">Tvoje výzvy</h2><a class="muted" href="#/quests">všetky &rsaquo;</a></div>
+    <div class="stack" style="gap:var(--space-3)">${rows || '<p class="muted">Zatiaľ žiadne. <a href="#/quests">Začni výzvou</a>.</p>'}</div></section>`;
 }
 
 async function loadJourney(alias: string): Promise<void> {
@@ -265,7 +266,7 @@ function notLoggedInView(restoring: boolean): string {
   <section class="card" style="text-align:center;max-width:540px;margin:var(--space-6) auto">
     <div style="font-size:44px;line-height:1">${'\u{1F98A}'}</div>
     <h2 style="margin:8px 0 4px">Nie si prihlásený ako žiak</h2>
-    <p class="muted" style="margin:0 0 var(--space-4)">Pripoj sa kódom triedy od učiteľa a uvidíš svoju cestu — XP, kompetencie, odznaky, misie aj certifikát.</p>
+    <p class="muted" style="margin:0 0 var(--space-4)">Pripoj sa kódom triedy od učiteľa a uvidíš svoju cestu — XP, kompetencie, odznaky, výzvy aj certifikát.</p>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <a class="btn btn--primary" href="#/join">Pripojiť sa kódom</a>
       <button type="button" class="btn btn--ghost" data-show-demo>Pozri demo ukážku</button>
@@ -388,7 +389,7 @@ export function StudentDashboardPage(): string {
       ${ProgressSummary(progressData)}
 
       <section>
-        <div class="section-title"><h2>Misie</h2></div>
+        <div class="section-title"><h2>Výzvy</h2></div>
         <div class="grid grid--cards">${missionCards}</div>
       </section>
 

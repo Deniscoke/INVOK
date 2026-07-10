@@ -4,6 +4,7 @@
  * project into the shared gallery "Ako žiaci menia svoje školy" (or removes it).
  */
 import { fetchCurationList, setProjectPublished, type CurationProject } from '../../services/galleryApi';
+import { moduleLabel } from '../../services/academyContent';
 
 export function GalleryPanel(): string {
   return `<section style="margin-top:var(--space-5)">
@@ -23,7 +24,7 @@ function row(p: CurationProject): string {
   const badge = p.published ? '<span class="chip chip--accent">v galérii ✓</span>' : '<span class="chip chip--muted">nezaradené</span>';
   return `<div class="card" style="padding:var(--space-3);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap">
     <div style="min-width:0">
-      <strong>${esc(p.title)}</strong> ${badge}
+      <strong>${esc(p.title)}</strong> ${moduleLabel(p.moduleId) ? `<span class="chip chip--muted">${moduleLabel(p.moduleId)}</span> ` : ''}${badge}
       <div class="muted" style="font-size:var(--fs-xs);margin-top:2px">${esc(p.pseudonym)} · ${esc(p.className)}${p.grade != null ? ` (${p.grade}. roč.)` : ''}</div>
     </div>
     ${btn}

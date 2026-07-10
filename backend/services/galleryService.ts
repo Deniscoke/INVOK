@@ -16,6 +16,7 @@ export interface GalleryProject {
   goal: string | null;
   affectedGroup: string | null;
   pseudonym: string;
+  moduleId: string | null;
   className: string;
   grade: number | null;
   schoolName: string;
@@ -44,6 +45,7 @@ function mapRow(row: Record<string, unknown>): GalleryProject | null {
     goal: (row.goal as string | null) ?? null,
     affectedGroup: (row.affected_group as string | null) ?? null,
     pseudonym: access ? String(access.pseudonym ?? 'žiak') : 'žiak',
+    moduleId: (row.module_id as string | null) ?? null,
     className: String(cls.name ?? ''),
     grade: cls.grade != null ? Number(cls.grade) : null,
     schoolName: String(school.name ?? ''),
@@ -62,7 +64,7 @@ export async function listGallery(
     const admin = getSupabaseAdmin();
     let query = admin
       .from('student_quests')
-      .select('id, title, goal, affected_group, gallery_published_at, student_access_codes(pseudonym), classes(name, grade, schools(name, region))')
+      .select('id, title, goal, affected_group, module_id, gallery_published_at, student_access_codes(pseudonym), classes(name, grade, schools(name, region))')
       .not('gallery_published_at', 'is', null)
       .order('gallery_published_at', { ascending: false })
       .limit(60);
@@ -150,7 +152,7 @@ export async function listCompletedForCuration(
 
     const { data, error } = await admin
       .from('student_quests')
-      .select('id, title, goal, affected_group, gallery_published_at, student_access_codes(pseudonym), classes(name, grade, schools(name, region))')
+      .select('id, title, goal, affected_group, module_id, gallery_published_at, student_access_codes(pseudonym), classes(name, grade, schools(name, region))')
       .in('class_id', classIds)
       .eq('state', 'completed')
       .order('updated_at', { ascending: false })

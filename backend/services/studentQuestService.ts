@@ -41,6 +41,7 @@ export interface StudentQuest {
   firstIdea: string | null;
   source: QuestSource;
   aiModel: string | null;
+  moduleId: string | null;
   state: QuestState;
   proposedDeadline: string | null;
   approvedDeadline: string | null;
@@ -61,6 +62,7 @@ export interface CreateQuestInput {
   evidence?: string;
   firstIdea?: string;
   source: QuestSource;
+  moduleId?: string;
   proposedDeadline?: string;
   missionTemplateId?: string;
   aiModel?: string;
@@ -81,7 +83,7 @@ function mockUnavailable<T>(): ServiceResult<T> {
   return {
     ok: false,
     error:
-      'Supabase backend nie je nastavený – v demo režime sa misie ukladajú lokálne v prehliadači.',
+      'Supabase backend nie je nastavený – v demo režime sa výzvy ukladajú lokálne v prehliadači.',
     status: 503,
   };
 }
@@ -92,16 +94,18 @@ function validateCreate(input: unknown): { ok: true; value: CreateQuestInput } |
 
   const title = typeof body.title === 'string' ? body.title.trim() : '';
   if (title.length < 3 || title.length > 160) {
-    issues.push({ field: 'title', message: 'Názov misie musí mať 3–160 znakov.' });
+    issues.push({ field: 'title', message: 'Názov výzvy musí mať 3–160 znakov.' });
   }
   const goal = typeof body.goal === 'string' ? body.goal.trim() : '';
   if (goal.length < 10) {
-    issues.push({ field: 'goal', message: 'Cieľ misie musí mať aspoň 10 znakov.' });
+    issues.push({ field: 'goal', message: 'Cieľ výzvy musí mať aspoň 10 znakov.' });
   }
   const source = body.source === 'ai' ? 'ai' : body.source === 'student' ? 'student' : null;
   if (!source) {
-    issues.push({ field: 'source', message: 'Zdroj misie musí byť „student“ alebo „ai“.' });
+    issues.push({ field: 'source', message: 'Zdroj výzvy musí byť „student“ alebo „ai“.' });
   }
+  const MODULE_IDS = ['m1', 'm2', 'm3', 'm4'];
+  const moduleId = typeof body.moduleId === 'string' && MODULE_IDS.includes(body.moduleId) ? body.moduleId : undefined;
   const proposedDeadline = typeof body.proposedDeadline === 'string' ? body.proposedDeadline : undefined;
   if (proposedDeadline && !/^\d{4}-\d{2}-\d{2}$/.test(proposedDeadline)) {
     issues.push({ field: 'proposedDeadline', message: 'Termín musí byť dátum vo formáte YYYY-MM-DD.' });
@@ -114,6 +118,7 @@ function validateCreate(input: unknown): { ok: true; value: CreateQuestInput } |
       title,
       goal,
       source: source as QuestSource,
+      moduleId,
       description: typeof body.description === 'string' ? body.description.trim().slice(0, 4000) : undefined,
       affectedGroup: typeof body.affectedGroup === 'string' ? body.affectedGroup.trim().slice(0, 200) : undefined,
       evidence: typeof body.evidence === 'string' ? body.evidence.trim().slice(0, 2000) : undefined,
@@ -141,6 +146,7 @@ function mapRow(row: Record<string, unknown>): StudentQuest {
     firstIdea: (row.first_idea as string | null) ?? null,
     source: row.source === 'ai' ? 'ai' : 'student',
     aiModel: (row.ai_model as string | null) ?? null,
+    moduleId: (row.module_id as string | null) ?? null,
     state: row.state as QuestState,
     proposedDeadline: (row.proposed_deadline as string | null) ?? null,
     approvedDeadline: (row.approved_deadline as string | null) ?? null,
@@ -176,7 +182,7 @@ export async function listOwnQuests(sessionToken: string): Promise<ServiceResult
     const rows = (data ?? []) as Record<string, unknown>[];
     return { ok: true, data: rows.map(mapRow), source: 'db' };
   } catch {
-    return { ok: false, error: 'Načítanie misií zlyhalo.', status: 500 };
+    return { ok: false, error: 'Načítanie výziev zlyhalo.', status: 500 };
   }
 }
 
@@ -211,7 +217,7 @@ export async function createOwnQuest(
       return {
         ok: false,
         error:
-          'Máš už 5 aktívnych misií. Najprv niektorú dokonči alebo zruš, potom môžeš pridať novú.',
+          'Máš už 5 aktívnych výziev. Najprv niektorú dokonči alebo zruš, potom môžeš pridať novú.',
         status: 409,
       };
     }
@@ -228,6 +234,7 @@ export async function createOwnQuest(
         evidence: value.evidence ?? null,
         first_idea: value.firstIdea ?? null,
         source: value.source,
+        module_id: value.moduleId ?? null,
         ai_model: value.aiModel ?? null,
         ai_prompt: value.aiPrompt ?? null,
         proposed_deadline: value.proposedDeadline ?? null,
@@ -238,13 +245,13 @@ export async function createOwnQuest(
       .single();
     if (error) {
       if (error.message.includes('STUDENT_QUEST_LIMIT_REACHED')) {
-        return { ok: false, error: 'Limit 5 aktívnych misií dosiahnutý.', status: 409 };
+        return { ok: false, error: 'Limit 5 aktívnych výziev dosiahnutý.', status: 409 };
       }
       return { ok: false, error: error.message, status: 500 };
     }
     return { ok: true, data: mapRow(data as Record<string, unknown>), source: 'db' };
   } catch {
-    return { ok: false, error: 'Uloženie misie zlyhalo.', status: 500 };
+    return { ok: false, error: 'Uloženie výzvy zlyhalo.', status: 500 };
   }
 }
 
@@ -267,12 +274,12 @@ export async function deleteOwnQuest(
       .maybeSingle();
     const row = existing as Record<string, unknown> | null;
     if (!row || row.student_access_code_id !== session.studentAccessCodeId) {
-      return { ok: false, error: 'Misia sa nenašla.', status: 404 };
+      return { ok: false, error: 'Výzva sa nenašla.', status: 404 };
     }
     if (row.state === 'approved' || row.state === 'submitted' || row.state === 'completed') {
       return {
         ok: false,
-        error: 'Schválenú alebo odovzdanú misiu už nemôžeš sám zmazať — popros učiteľa.',
+        error: 'Schválenú alebo odovzdanú výzvu už nemôžeš sám zmazať — popros učiteľa.',
         status: 409,
       };
     }
@@ -417,7 +424,7 @@ export async function listClassPendingQuests(
     const rows = (data ?? []) as Record<string, unknown>[];
     return { ok: true, data: rows.map(mapRow), source: 'db' };
   } catch {
-    return { ok: false, error: 'Načítanie misií zlyhalo.', status: 500 };
+    return { ok: false, error: 'Načítanie výziev zlyhalo.', status: 500 };
   }
 }
 
@@ -427,13 +434,13 @@ export async function listQuestAttachments(ctx: RequestContext, questId: string)
     return { ok: false, error: 'Iba učiteľ/admin.', status: 403 };
   }
   if (!isConfigured()) return mockUnavailable();
-  if (!questId) return { ok: false, error: 'Chýba ID misie.', status: 400 };
+  if (!questId) return { ok: false, error: 'Chýba ID výzvy.', status: 400 };
   try {
     const { getSupabaseAdmin } = await import('../lib/supabaseAdmin.js');
     const admin = getSupabaseAdmin();
     const { data } = await admin.from('student_quests').select('class_id').eq('id', questId).maybeSingle();
     const row = data as Record<string, unknown> | null;
-    if (!row) return { ok: false, error: 'Misia sa nenašla.', status: 404 };
+    if (!row) return { ok: false, error: 'Výzva sa nenašla.', status: 404 };
     if (ctx.role !== 'admin') {
       const { data: membership } = await admin
         .from('class_memberships')
@@ -473,7 +480,7 @@ export async function reviewQuest(
   const teacherRole = ctx.role;
   if (!isConfigured()) return mockUnavailable();
   if (!input || !input.questId || !input.decision) {
-    return { ok: false, error: 'Chýba ID misie alebo rozhodnutie.', status: 400 };
+    return { ok: false, error: 'Chýba ID výzvy alebo rozhodnutie.', status: 400 };
   }
   const allowed: ApprovalDecision[] = ['approve', 'request_changes', 'reject'];
   if (!allowed.includes(input.decision)) {
@@ -496,9 +503,9 @@ export async function reviewQuest(
       .eq('id', input.questId)
       .maybeSingle();
     const row = existing as Record<string, unknown> | null;
-    if (!row) return { ok: false, error: 'Misia sa nenašla.', status: 404 };
+    if (!row) return { ok: false, error: 'Výzva sa nenašla.', status: 404 };
     if (TERMINAL_STATES.includes(row.state as QuestState)) {
-      return { ok: false, error: 'Misia je už uzavretá.', status: 409 };
+      return { ok: false, error: 'Výzva je už uzavretá.', status: 409 };
     }
 
     // Verify the teacher actually manages this class.
@@ -538,6 +545,6 @@ export async function reviewQuest(
     if (error) return { ok: false, error: error.message, status: 500 };
     return { ok: true, data: mapRow(data as Record<string, unknown>), source: 'db' };
   } catch {
-    return { ok: false, error: 'Hodnotenie misie zlyhalo.', status: 500 };
+    return { ok: false, error: 'Hodnotenie výzvy zlyhalo.', status: 500 };
   }
 }

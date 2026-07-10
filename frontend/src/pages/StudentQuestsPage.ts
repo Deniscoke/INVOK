@@ -1,5 +1,5 @@
 /**
- * Student Quests page — "Moje misie".
+ * Student Quests page — "Moje výzvy".
  *
  * Two creation paths:
  *   1. Navrhnúť problém (manual)  – student fills the structured form.
@@ -29,6 +29,7 @@ import {
 import { submitSolution, fetchMySubmissions, type SubmissionResult, type AiEvaluation } from '../services/submissionApi';
 import { uploadQuestFile, listMyQuestFiles, ATTACH_MAX_FILES, type UploadedAttachment } from '../services/uploadApi';
 import { fetchGallery, type GalleryProject } from '../services/galleryApi';
+import { ACADEMY_MODULES, moduleLabel } from '../services/academyContent';
 import { getCompetencies } from '../services/mockDataService';
 
 let pendingMount: (() => void) | null = null;
@@ -50,12 +51,12 @@ interface StateBadge {
 
 const STATE_BADGES: Record<QuestState, StateBadge> = {
   draft: { label: 'Koncept', chipClass: 'chip--muted', hint: 'Ešte neodoslané učiteľovi.' },
-  pending_approval: { label: 'Čaká na učiteľa', chipClass: 'chip--warm', hint: 'Učiteľ misiu ešte nepotvrdil.' },
+  pending_approval: { label: 'Čaká na učiteľa', chipClass: 'chip--warm', hint: 'Učiteľ výzvu ešte nepotvrdil.' },
   changes_requested: { label: 'Učiteľ pýta úpravu', chipClass: 'chip--warm', hint: 'Pozri spätnú väzbu a uprav návrh.' },
   approved: { label: 'Schválená', chipClass: 'chip--accent', hint: 'Učiteľ schválil. Môžeš odovzdať riešenie.' },
   submitted: { label: 'Odovzdaná', chipClass: 'chip--accent', hint: 'Riešenie čaká na AI a učiteľské hodnotenie.' },
-  completed: { label: 'Hotovo', chipClass: 'chip--muted', hint: 'Misia dokončená a ocenená.' },
-  rejected: { label: 'Zamietnutá', chipClass: 'chip--muted', hint: 'Misiu učiteľ nepotvrdil.' },
+  completed: { label: 'Hotovo', chipClass: 'chip--muted', hint: 'Výzva dokončená a ocenená.' },
+  rejected: { label: 'Zamietnutá', chipClass: 'chip--muted', hint: 'Výzvu učiteľ nepotvrdil.' },
 };
 
 function formatDate(iso?: string): string {
@@ -76,7 +77,7 @@ function questCard(q: StudentQuest): string {
     <div class="card-title">
       <div>
         <div class="muted" style="font-size:var(--fs-xs)">
-          ${q.source === 'ai' ? '🤖 AI návrh' : '✨ Tvoj návrh'} · vytvorené ${formatDate(q.createdAt)}
+          ${q.source === 'ai' ? '🤖 AI návrh' : '✨ Tvoj návrh'} · vytvorené ${formatDate(q.createdAt)}${moduleLabel(q.moduleId) ? ` · ${moduleLabel(q.moduleId)}` : ''}
         </div>
         <h3 style="margin:4px 0 0">${escapeHtml(q.title)}</h3>
       </div>
@@ -114,11 +115,11 @@ function questCard(q: StudentQuest): string {
 function renderSubmitPanel(q: StudentQuest): string {
   return `
   <details class="card" style="margin-top:var(--space-3);background:var(--tint-success, #ecfdf5);border-left:4px solid var(--color-success);padding:var(--space-3)">
-    <summary style="cursor:pointer;font-weight:600">✅ Odovzdaj riešenie tejto misie</summary>
+    <summary style="cursor:pointer;font-weight:600">✅ Odovzdaj riešenie tejto výzvy</summary>
     <form class="stack" data-submit-form="${escapeHtml(q.id)}" style="margin-top:var(--space-3)" novalidate>
       <label class="field">Tvoja odpoveď / popis riešenia
         <textarea data-submit-field="solutionSummary" rows="4" minlength="20" maxlength="3000" required
-          placeholder="Opíš, čo si urobil/a alebo navrhuješ pre splnenie cieľa misie."></textarea>
+          placeholder="Opíš, čo si urobil/a alebo navrhuješ pre splnenie cieľa výzvy."></textarea>
       </label>
       <label class="field">Dôkaz alebo pozorovanie
         <textarea data-submit-field="evidence" rows="3" maxlength="2000" required
@@ -136,7 +137,7 @@ function renderSubmitPanel(q: StudentQuest): string {
         <input type="file" data-submit-files multiple
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip">
         <span class="muted" style="display:block;margin-top:4px;font-size:var(--fs-xs)">
-          Pridaj všetko, čím vieš ukázať svoju misiu — <strong>fotky, prezentáciu, PDF, video, dokument…</strong>
+          Pridaj všetko, čím vieš ukázať svoju výzvu — <strong>fotky, prezentáciu, PDF, video, dokument…</strong>
           Môžeš naraz vybrať viac súborov (max ${ATTACH_MAX_FILES}, každý do 50 MB). Učiteľ aj AI ich uvidia.
         </span>
       </label>
@@ -151,14 +152,14 @@ function renderSubmittedHint(): string {
   return `
   <div class="teacher-hint" style="margin-top:var(--space-3);border-left-color:var(--color-accent)">
     <div class="teacher-hint__label">Odovzdané — čaká na učiteľa</div>
-    AI už misiu posúdila, učiteľ potvrdí výsledok a pridelí finálne XP.
+    AI už výzvu posúdila, učiteľ potvrdí výsledok a pridelí finálne XP.
   </div>`;
 }
 
 function renderCompletedHint(): string {
   return `
   <div class="teacher-hint" style="margin-top:var(--space-3);border-left-color:var(--color-success);background:var(--tint-success, #ecfdf5)">
-    <div class="teacher-hint__label" style="color:#15803d">🏆 Misia dokončená</div>
+    <div class="teacher-hint__label" style="color:#15803d">🏆 Výzva dokončená</div>
     Učiteľ potvrdil dokončenie. XP a kompetencie sú zarátané.
   </div>`;
 }
@@ -166,10 +167,10 @@ function renderCompletedHint(): string {
 function emptyStateCard(): string {
   return `
   <section class="card" style="text-align:center">
-    <h3 style="margin-top:0">Žiadne misie zatiaľ</h3>
+    <h3 style="margin-top:0">Žiadne výzvy zatiaľ</h3>
     <p class="muted">Vyber si jednu z dvoch ciest nižšie — buď navrhni vlastný problém,
       alebo nechaj AI pripraviť návrh v súlade s INVOK cieľmi a ŠVP ZV.
-      Učiteľ misiu potvrdí a potom môžeš začať pracovať.</p>
+      Učiteľ výzvu potvrdí a potom môžeš začať pracovať.</p>
   </section>`;
 }
 
@@ -182,11 +183,14 @@ function creationPanels(disabled: boolean): string {
       <h3 style="margin-top:0">✨ Navrhni vlastný problém</h3>
       <p class="muted" style="font-size:var(--fs-sm)">Všimni si problém vo svojej škole / komunite a pomenuj ho.</p>
       <form id="quest-propose-form" class="stack" novalidate>
-        <label class="field">Názov misie
+        <label class="field">Názov výzvy
           <input id="q-title" type="text" maxlength="120" required placeholder="napr. Dlhé rady v jedálni" ${dis}>
         </label>
         <label class="field">Cieľ – čo chceš dosiahnuť
           <textarea id="q-goal" rows="2" maxlength="500" required placeholder="napr. Skrátiť čakanie o polovicu pomocou nového rozvrhu" ${dis}></textarea>
+        </label>
+        <label class="field">Modul programu
+          <select id="q-module" ${dis}>${ACADEMY_MODULES.map((m) => `<option value="${m.id}">${m.emoji} ${m.title}</option>`).join('')}</select>
         </label>
         <div class="grid grid--2" style="gap:var(--space-3)">
           <label class="field">Koho sa týka
@@ -208,11 +212,14 @@ function creationPanels(disabled: boolean): string {
     </section>
 
     <section class="card" style="border-left:4px solid var(--color-accent)">
-      <h3 style="margin-top:0">🤖 AI návrh misie</h3>
+      <h3 style="margin-top:0">🤖 AI návrh výzvy</h3>
       <p class="muted" style="font-size:var(--fs-sm)">Napíš oblasť záujmu a AI ti pripraví celý návrh — cieľ, dôkaz aj prvý krok — v súlade s INVOK + ŠVP ZV.</p>
       <form id="quest-ai-form" class="stack" novalidate>
         <label class="field">Oblasť záujmu
           <input id="q-ai-topic" type="text" maxlength="200" placeholder="napr. triedenie odpadu v triede" required ${dis}>
+        </label>
+        <label class="field">Modul programu
+          <select id="q-ai-module" ${dis}>${ACADEMY_MODULES.map((m) => `<option value="${m.id}">${m.emoji} ${m.title}</option>`).join('')}</select>
         </label>
         <div class="grid grid--2" style="gap:var(--space-3)">
           <label class="field">Ročník (voliteľné)
@@ -282,7 +289,7 @@ function renderMyFiles(q: StudentQuest): string {
 
 function renderListSection(): string {
   if (state.loading) {
-    return `<p class="muted">Načítavam misie…</p>`;
+    return `<p class="muted">Načítavam výzvy…</p>`;
   }
   if (state.error) {
     return `<p class="muted" style="color:var(--color-danger)">${escapeHtml(state.error)}</p>`;
@@ -315,7 +322,7 @@ export function StudentQuestsPage(): string {
   <section class="card">
     <div class="card-title">
       <div>
-        <div class="muted">Moje misie</div>
+        <div class="muted">Moje projektové výzvy</div>
         <h2 style="margin:0">${escapeHtml(alias)}</h2>
       </div>
       <div>
@@ -325,7 +332,7 @@ export function StudentQuestsPage(): string {
       </div>
     </div>
     <p class="muted" style="margin-top:var(--space-3)">
-      Misie navrhuješ ty alebo AI v súlade s cieľmi INVOK a ŠVP ZV.
+      Výzvy navrhuješ ty alebo AI v súlade s cieľmi INVOK a ŠVP ZV.
       <strong>Učiteľ ich schvaľuje pred odovzdaním</strong> a po odovzdaní hodnotí spolu s AI.
     </p>
   </section>
@@ -340,17 +347,17 @@ export function StudentQuestsPage(): string {
 
   ${overLimit ? `
   <section class="card" style="margin-top:var(--space-4);border-left:4px solid var(--color-danger);background:#fef2f2">
-    <strong>Dosiahol si limit ${QUEST_LIMITS.MAX_ACTIVE} aktívnych misií.</strong>
-    <p class="muted" style="margin:6px 0 0">Najprv zruš alebo dokonči nejakú misiu, potom môžeš pridať novú.</p>
+    <strong>Dosiahol si limit ${QUEST_LIMITS.MAX_ACTIVE} aktívnych výziev.</strong>
+    <p class="muted" style="margin:6px 0 0">Najprv zruš alebo dokonči nejakú výzvu, potom môžeš pridať novú.</p>
   </section>` : ''}
 
   <section style="margin-top:var(--space-5)">
-    <div class="section-title"><h2 style="margin:0">Aktuálne misie</h2></div>
+    <div class="section-title"><h2 style="margin:0">Aktuálne výzvy</h2></div>
     <div id="quest-list">${renderListSection()}</div>
   </section>
 
   <section style="margin-top:var(--space-6)">
-    <div class="section-title"><h2 style="margin:0">Pridaj novú misiu</h2></div>
+    <div class="section-title"><h2 style="margin:0">Pridaj novú výzvu</h2></div>
     ${creationPanels(overLimit)}
   </section>
 
@@ -365,7 +372,7 @@ export function StudentQuestsPage(): string {
 function galleryCard(p: GalleryProject): string {
   const where = `${escapeHtml(p.className)}${p.grade != null ? ` (${p.grade}. roč.)` : ''} · ${escapeHtml(p.schoolName)}${p.region ? ` · ${escapeHtml(p.region)}` : ''}`;
   return `<article class="card" style="border-left:4px solid var(--color-warm)">
-    <strong>${escapeHtml(p.title)}</strong>
+    <strong>${escapeHtml(p.title)}</strong>${moduleLabel(p.moduleId) ? ` <span class="chip chip--muted">${moduleLabel(p.moduleId)}</span>` : ''}
     ${p.goal ? `<p class="muted" style="margin:6px 0 0;font-size:var(--fs-sm)">${escapeHtml(p.goal)}</p>` : ''}
     ${p.affectedGroup ? `<p class="muted" style="margin:6px 0 0;font-size:var(--fs-xs)"><strong>Komu pomohol:</strong> ${escapeHtml(p.affectedGroup)}</p>` : ''}
     <div class="muted" style="margin-top:var(--space-2);font-size:var(--fs-xs)">${'\u{2B50}'} ${escapeHtml(p.pseudonym)} · ${where}</div>
@@ -433,7 +440,7 @@ async function refreshQuests(): Promise<void> {
     reRenderPage();
   } catch (err) {
     state.loading = false;
-    state.error = err instanceof Error ? err.message : 'Nepodarilo sa načítať misie.';
+    state.error = err instanceof Error ? err.message : 'Nepodarilo sa načítať výzvy.';
     updateListDom();
   }
 }
@@ -451,7 +458,7 @@ function bindMyFilesButtons(): void {
       btn.disabled = false;
       btn.textContent = original;
       if (files.length === 0) {
-        slot.innerHTML = '<p class="muted" style="font-size:var(--fs-sm)">Zatiaľ si k tejto misii nenahral/a žiadne súbory.</p>';
+        slot.innerHTML = '<p class="muted" style="font-size:var(--fs-sm)">Zatiaľ si k tejto výzve nenahral/a žiadne súbory.</p>';
         return;
       }
       slot.innerHTML =
@@ -473,7 +480,7 @@ function bindDelete(): void {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-quest-id');
       if (!id) return;
-      const confirmed = window.confirm('Naozaj zmazať túto misiu?');
+      const confirmed = window.confirm('Naozaj zmazať túto výzvu?');
       if (!confirmed) return;
       btn.disabled = true;
       const res = await deleteQuest(id);
@@ -504,15 +511,16 @@ function bindProposeForm(): void {
       evidence: readVal('#q-evidence'),
       firstIdea: readVal('#q-firstidea'),
       proposedDeadline: readVal('#q-deadline') || undefined,
+      moduleId: readVal('#q-module') || undefined,
       source: 'student' as const,
     };
 
     if (input.title.length < 3) {
-      if (msg) msg.textContent = 'Daj misii krátky názov (min. 3 znaky).';
+      if (msg) msg.textContent = 'Daj výzve krátky názov (min. 3 znaky).';
       return;
     }
     if (input.goal.length < 10) {
-      if (msg) msg.textContent = 'Popíš cieľ misie (min. 10 znakov).';
+      if (msg) msg.textContent = 'Popíš cieľ výzvy (min. 10 znakov).';
       return;
     }
     if (input.evidence.length < 5 || input.firstIdea.length < 5) {
@@ -639,6 +647,7 @@ function bindAiPreviewActions(): void {
       evidence: d.evidence,
       firstIdea: d.firstIdea,
       proposedDeadline: deadline,
+      moduleId: readVal('#q-ai-module') || undefined,
       source: 'ai',
       aiModel: d.aiModel,
       aiPrompt: undefined,

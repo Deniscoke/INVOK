@@ -106,7 +106,7 @@ function growthHtml(questionnaires: QuestionnaireSummary[]): string {
 function projectsHtml(quests: StudentQuest[], filesByQuest: Record<string, TeacherFile[]>): string {
   const projects = quests.filter((q) => q.state !== 'draft' && q.state !== 'rejected');
   if (projects.length === 0) {
-    return `<section class="pf-section"><h3>${'\u{1F680}'} Moje projekty</h3><p class="muted">Zatiaľ žiadne projekty — začni misiou.</p></section>`;
+    return `<section class="pf-section"><h3>${'\u{1F680}'} Moje projekty</h3><p class="muted">Zatiaľ žiadne projekty — začni výzvou.</p></section>`;
   }
   const cards = projects
     .map((q) => {

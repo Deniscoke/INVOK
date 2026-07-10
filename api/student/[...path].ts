@@ -90,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const contentType = typeof body.contentType === 'string' ? body.contentType : 'application/octet-stream';
     const sizeBytes = Number(body.sizeBytes ?? 0);
     if (!questId || !fileName) {
-      res.status(400).json({ ok: false, error: 'Chýba misia alebo názov súboru.' });
+      res.status(400).json({ ok: false, error: 'Chýba výzva alebo názov súboru.' });
       return;
     }
     if (!isAllowedAttachmentType(contentType)) {
@@ -104,11 +104,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // The quest must belong to this student and be in a submittable state.
     const quest = await loadQuestForStudent(session.studentAccessCodeId, questId);
     if (!quest) {
-      res.status(403).json({ ok: false, error: 'Táto misia nepatrí tebe.' });
+      res.status(403).json({ ok: false, error: 'Táto výzva nepatrí tebe.' });
       return;
     }
     if (quest.state !== 'approved' && quest.state !== 'changes_requested') {
-      res.status(409).json({ ok: false, error: 'Súbory môžeš pridať až keď je misia schválená učiteľom.' });
+      res.status(409).json({ ok: false, error: 'Súbory môžeš pridať až keď je výzva schválená učiteľom.' });
       return;
     }
     const signed = await createQuestUploadUrl(questId, fileName);
@@ -231,7 +231,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const questId = typeof req.query.questId === 'string' ? req.query.questId : '';
       const quest = await loadQuestForStudent(session.studentAccessCodeId, questId);
       if (!quest) {
-        res.status(403).json({ ok: false, error: 'Táto misia nepatrí tebe.' });
+        res.status(403).json({ ok: false, error: 'Táto výzva nepatrí tebe.' });
         return;
       }
       res.status(200).json({ ok: true, files: await listQuestFiles(questId) });
@@ -261,7 +261,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (req.method === 'DELETE') {
       const id = subroute || (typeof req.query.id === 'string' ? req.query.id : '') || String(body.id ?? '');
       if (!id) {
-        res.status(400).json({ ok: false, error: 'Chýba ID misie.' });
+        res.status(400).json({ ok: false, error: 'Chýba ID výzvy.' });
         return;
       }
       const result = await deleteOwnQuest(token, id);

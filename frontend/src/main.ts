@@ -34,7 +34,7 @@ interface Route {
 const routes: Route[] = [
   { path: '/', label: 'Domov', render: LandingPage },
   { path: '/student', label: 'Žiak', render: StudentDashboardPage, mount: mountStudentDashboard },
-  { path: '/quests', label: 'Misie', render: StudentQuestsPage, mount: mountStudentQuestsPage },
+  { path: '/quests', label: 'Projektové výzvy', render: StudentQuestsPage, mount: mountStudentQuestsPage },
   { path: '/akademia', label: 'Akadémia', render: AcademyPage, mount: mountAcademyPage },
   { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, mount: mountTeacherDashboard },
   { path: '/login', label: 'Prihlásenie', render: LoginPage, mount: mountLoginPage },

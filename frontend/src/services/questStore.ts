@@ -31,6 +31,7 @@ export type QuestState =
   | 'rejected';
 
 export interface StudentQuest {
+  moduleId?: string | null;
   id: string;
   ownerKey: string;            // pseudonymous key (localStorage mode) or empty
   studentAccessCodeId?: string; // db mode
@@ -55,6 +56,7 @@ export interface StudentQuest {
 }
 
 export interface CreateQuestInput {
+  moduleId?: string;
   title: string;
   description?: string;
   goal?: string;
@@ -158,14 +160,14 @@ function listLocal(): StudentQuest[] {
 
 function createLocal(input: CreateQuestInput): QuestMutationResult {
   if (!input.title || input.title.trim().length < 3) {
-    return { ok: false, error: 'Misia potrebuje aspoň krátky názov.' };
+    return { ok: false, error: 'Výzva potrebuje aspoň krátky názov.' };
   }
   const owner = ownerKey();
   const active = readLocal().filter((q) => q.ownerKey === owner && isActive(q.state)).length;
   if (active >= MAX_ACTIVE_QUESTS) {
     return {
       ok: false,
-      error: `Máš už ${MAX_ACTIVE_QUESTS} aktívnych misií. Zruš alebo dokonči nejakú predtým než pridáš ďalšiu.`,
+      error: `Máš už ${MAX_ACTIVE_QUESTS} aktívnych výziev. Zruš alebo dokonči nejakú predtým než pridáš ďalšiu.`,
     };
   }
   const now = new Date().toISOString();
@@ -182,6 +184,7 @@ function createLocal(input: CreateQuestInput): QuestMutationResult {
     aiModel: input.aiModel,
     state: 'pending_approval',
     proposedDeadline: input.proposedDeadline,
+    moduleId: input.moduleId,
     createdAt: now,
     updatedAt: now,
   };
@@ -195,11 +198,11 @@ function deleteLocal(id: string): QuestMutationResult {
   const all = readLocal();
   const owner = ownerKey();
   const quest = all.find((q) => q.id === id && q.ownerKey === owner);
-  if (!quest) return { ok: false, error: 'Misia sa nenašla.' };
+  if (!quest) return { ok: false, error: 'Výzva sa nenašla.' };
   if (quest.state === 'approved' || quest.state === 'submitted' || quest.state === 'completed') {
     return {
       ok: false,
-      error: 'Schválenú alebo odovzdanú misiu už nemôžeš sám zmazať — popros učiteľa.',
+      error: 'Schválenú alebo odovzdanú výzvu už nemôžeš sám zmazať — popros učiteľa.',
     };
   }
   writeLocal(all.filter((q) => q.id !== id));
@@ -230,7 +233,7 @@ async function apiCreate(input: CreateQuestInput): Promise<QuestMutationResult> 
   });
   const data = (await res.json()) as { ok: boolean; quest?: StudentQuest; error?: string; source?: 'db' | 'mock' };
   if (!res.ok || !data.ok) {
-    return { ok: false, error: data.error ?? 'Uloženie misie zlyhalo.' };
+    return { ok: false, error: data.error ?? 'Uloženie výzvy zlyhalo.' };
   }
   return { ok: true, quest: data.quest, source: data.source === 'mock' ? 'local' : 'db' };
 }
@@ -319,8 +322,8 @@ export async function generateQuestDraft(input: GenerateInput): Promise<Generate
     ok: true,
     source: 'mock',
     draft: {
-      title: `Misia: ${input.topic.charAt(0).toUpperCase()}${input.topic.slice(1)}`,
-      description: `V tejto misii sa pozrieš na oblasť „${input.topic}“ vo svojej škole a komunite. Zistíš, ako to vyzerá teraz, navrhneš jedno konkrétne zlepšenie a vyskúšaš ho v malom.`,
+      title: `Výzva: ${input.topic.charAt(0).toUpperCase()}${input.topic.slice(1)}`,
+      description: `V tejto výzve sa pozrieš na oblasť „${input.topic}“ vo svojej škole a komunite. Zistíš, ako to vyzerá teraz, navrhneš jedno konkrétne zlepšenie a vyskúšaš ho v malom.`,
       goal: `Urobiť 1 merateľný krok, ktorý zlepší situáciu v oblasti „${input.topic}“.`,
       affectedGroup: 'naša trieda',
       evidence: `3–5 dní krátkeho pozorovania alebo prieskumu v oblasti „${input.topic}“.`,

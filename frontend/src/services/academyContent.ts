@@ -83,6 +83,12 @@ export const ACADEMY_MODULES: readonly AcademyModule[] = [
   { id: 'm4', title: 'Komunikácia a prezentácia', emoji: '\u{1F3A4}', badge: 'Mladý rečník', lessons: [] },
 ];
 
+/** Short display label for a programme module id (chips), e.g. "💡 Podnikavosť a inovácie". */
+export function moduleLabel(moduleId: string | null | undefined): string | null {
+  const m = ACADEMY_MODULES.find((x) => x.id === moduleId);
+  return m ? `${m.emoji} ${m.title}` : null;
+}
+
 export function findLesson(lessonId: string): { module: AcademyModule; lesson: AcademyLesson } | null {
   for (const module of ACADEMY_MODULES) {
     const lesson = module.lessons.find((l) => l.id === lessonId);

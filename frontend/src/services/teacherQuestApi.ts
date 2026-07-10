@@ -32,6 +32,7 @@ export interface TeacherQuestRow {
   firstIdea: string | null;
   source: 'student' | 'ai';
   aiModel: string | null;
+  moduleId: string | null;
   state: QuestState;
   proposedDeadline: string | null;
   approvedDeadline: string | null;

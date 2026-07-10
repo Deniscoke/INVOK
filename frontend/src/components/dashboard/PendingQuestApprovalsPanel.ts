@@ -12,6 +12,7 @@
  *   - tune the XP estimate (only when approving).
  */
 
+import { moduleLabel } from '../../services/academyContent';
 import {
   listPendingQuests,
   reviewQuestRequest,
@@ -64,7 +65,7 @@ function questCard(q: TeacherQuestRow): string {
     <div class="card-title">
       <div>
         <div class="muted" style="font-size:var(--fs-xs)">
-          ${q.source === 'ai' ? '🤖 AI návrh' : '✨ Návrh žiaka'} ·
+          ${moduleLabel(q.moduleId) ? `${moduleLabel(q.moduleId)} · ` : ''}${q.source === 'ai' ? '🤖 AI návrh' : '✨ Návrh žiaka'} ·
           žiak: <strong>${escapeHtml(q.studentAlias ?? '—')}</strong> ·
           vytvorené ${formatDate(q.createdAt)}
         </div>
@@ -195,14 +196,14 @@ interface PanelState {
 
 function panelMarkup(state: PanelState): string {
   if (state.loading) {
-    return '<p class="muted">Načítavam misie čakajúce na tvoje schválenie…</p>';
+    return '<p class="muted">Načítavam výzvy čakajúce na tvoje schválenie…</p>';
   }
   if (state.error) {
     return `<p class="muted" style="color:var(--color-danger)">${escapeHtml(state.error)}</p>`;
   }
   if (state.rows.length === 0) {
-    return `<p class="muted">Žiadne misie nečakajú na tvoje schválenie. 🎉
-      Žiaci si môžu novú misiu navrhnúť na stránke <strong>Moje misie</strong>.</p>`;
+    return `<p class="muted">Žiadne výzvy nečakajú na tvoje schválenie. 🎉
+      Žiaci si môžu novú výzvu navrhnúť na stránke <strong>Projektové výzvy</strong>.</p>`;
   }
   return `<div class="stack" style="gap:var(--space-4)">${state.rows.map(questCard).join('')}</div>`;
 }
@@ -374,13 +375,13 @@ export function PendingQuestApprovalsPanel(): string {
   <section class="card" id="pending-quest-approvals" style="margin-top:var(--space-5)">
     <div class="card-title">
       <div>
-        <div class="muted">Schvaľovanie misií</div>
+        <div class="muted">Schvaľovanie výziev</div>
         <h2 style="margin:0">Návrhy žiakov</h2>
       </div>
       <button type="button" id="pending-quest-refresh" class="btn btn--ghost btn--sm">Obnoviť</button>
     </div>
     <p class="muted" style="margin-top:var(--space-2)">
-      Žiaci si navrhujú misie sami alebo cez AI. Tu ich potvrdzuješ predtým, než ich začnú riešiť.
+      Žiaci si navrhujú výzvy sami alebo cez AI. Tu ich potvrdzuješ predtým, než ich začnú riešiť.
       AI návrhy sa generujú v súlade s INVOK kompetenciami a ŠVP ZV — vždy si pred schválením preverí cieľ a dôkaz.
     </p>
     <div id="pending-quest-slot" style="margin-top:var(--space-3)">${panelMarkup({ loading: true, rows: [] })}</div>

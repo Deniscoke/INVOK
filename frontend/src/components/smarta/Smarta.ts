@@ -13,7 +13,7 @@ import { askSmarta, type ChatTurn } from './smartaApi';
 import { speak, stopSpeaking } from './tts';
 
 const MAX_INPUT = 1000;
-const GREETING = 'Čau! Som Smarta 🦊 Tvoj parťák do školy aj mimo nej. Spýtaj sa ma na hocičo — úlohy, projekty, matiku, slovinu, nápady na misiu… proste čo treba. 😎';
+const GREETING = 'Čau! Som Smarta 🦊 Tvoj parťák do školy aj mimo nej. Spýtaj sa ma na hocičo — úlohy, projekty, matiku, slovinu, nápady na výzvu… proste čo treba. 😎';
 
 // Minimal Web Speech API typing (no standard lib types).
 interface MinimalRecognition {

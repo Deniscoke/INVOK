@@ -12,6 +12,7 @@ export interface GalleryProject {
   goal: string | null;
   affectedGroup: string | null;
   pseudonym: string;
+  moduleId: string | null;
   className: string;
   grade: number | null;
   schoolName: string;
