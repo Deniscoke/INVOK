@@ -39,7 +39,7 @@ const routes: Route[] = [
   { path: '/teacher', label: 'Učiteľ', render: TeacherDashboardPage, mount: mountTeacherDashboard },
   { path: '/login', label: 'Prihlásenie', render: LoginPage, mount: mountLoginPage },
   { path: '/join', label: 'Pripojiť sa', render: StudentJoinPage, mount: mountStudentJoinPage },
-  { path: '/pilot', label: 'Pilot', render: PilotSetupPage, mount: mountPilotSetup },
+  { path: '/pilot', label: 'Tvorba triedy', render: PilotSetupPage, mount: mountPilotSetup },
   { path: '/pristupnost', label: 'Prístupnosť', render: LegalPage },
 ];
 

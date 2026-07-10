@@ -50,7 +50,7 @@ function studentRow(s: ClassStudent): string {
 
 function render(students: ClassStudent[]): string {
   if (students.length === 0) {
-    return '<p class="muted">Zatiaľ žiadni žiaci. Vytvor triedu a kódy v <a href="#/pilot">pilot setupe</a>.</p>';
+    return '<p class="muted">Zatiaľ žiadni žiaci. Vytvor triedu a kódy v sekcii <a href="#/pilot">Tvorba triedy</a>.</p>';
   }
   const legend = `<p class="muted" style="font-size:var(--fs-xs);margin:0 0 var(--space-3)">${'\u{1F3AC}'} lekcie · ${'\u{1F680}'} projektové výzvy (hotové/spolu) · ${'\u{1F4CB}'} dotazník (vstup → výstup)</p>`;
   return `${legend}<div class="stack" style="gap:8px">${students.map(studentRow).join('')}</div>`;

@@ -58,11 +58,11 @@ function realAccountWelcome(): string {
     </div>
     <p class="muted" style="margin-top:var(--space-3)">
       Tvoj učiteľský účet je pripravený. Zatiaľ tu nie sú žiadne triedy ani odovzdania —
-      vytvor si triedu cez pilotné rozhranie a vygeneruj prístupové kódy pre žiakov.
+      vytvor si triedu a vygeneruj prístupové kódy pre žiakov.
       Hneď ako odovzdajú prvé misie, uvidíš ich tu.
     </p>
     <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4)">
-      <a class="btn btn--primary" href="#/pilot">${icon('compass', 16)} Otvoriť pilot setup</a>
+      <a class="btn btn--primary" href="#/pilot">${icon('compass', 16)} Vytvoriť triedu</a>
       <a class="btn btn--ghost" href="#/student">${icon('book', 16)} Pozrieť žiacke prostredie</a>
     </div>
   </section>`;
@@ -87,7 +87,7 @@ function myClassesCard(classes: DashboardClass[]): string {
     <div class="section-title"><h2 style="margin:0">Moje triedy</h2><span class="chip chip--muted">${classes.length}</span></div>
     <ul style="list-style:none;padding:0;margin:0">${rows}</ul>
     <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--space-3)">
-      Triedy vytvorené v pilot setupe. Reálny prehľad odovzdaní sa zobrazí po pripojení Supabase backendu.
+      Triedy vytvorené v sekcii Tvorba triedy. Reálny prehľad odovzdaní sa zobrazí po pripojení Supabase backendu.
     </p>
   </section>`;
 }
@@ -298,7 +298,7 @@ function sourceNote(source: DashboardData['source']): string {
     return '<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Demo (anonymizované) dáta — pripoj Supabase pre reálne čísla.</p>';
   }
   if (source === 'empty') {
-    return '<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Tvoj účet zatiaľ nemá žiadne dáta. Vytvor triedu a žiakov v <a href="#/pilot">pilot setupe</a>.</p>';
+    return '<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">Tvoj účet zatiaľ nemá žiadne dáta. Vytvor triedu a žiakov v sekcii <a href="#/pilot">Tvorba triedy</a>.</p>';
   }
   return '';
 }

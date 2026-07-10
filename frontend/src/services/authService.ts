@@ -221,7 +221,7 @@ export async function signUpTeacher(email: string, password: string, displayName
             'Účet bol vytvorený, ale chýba profil učiteľa. V Supabase aplikuj migrácie (006_auto_create_profile.sql) a skús znova.',
         };
       }
-      return { ok: true, info: 'Účet vytvorený. Môžeš pokračovať do pilot setupu.' };
+      return { ok: true, info: 'Účet vytvorený. Môžeš pokračovať do tvorby triedy.' };
     }
 
     return {
@@ -293,7 +293,7 @@ export async function joinAsStudent(code: string, pseudonym: string): Promise<Jo
     return {
       ok: false,
       error:
-        'Kód nesedí (alebo bol vygenerovaný v inom prehliadači). Skontroluj kód a prezývku, alebo si nech učiteľ vygeneruje nové kódy v pilot setupe.',
+        'Kód nesedí (alebo bol vygenerovaný v inom prehliadači). Skontroluj kód a prezývku, alebo si nech učiteľ vygeneruje nové kódy v sekcii Tvorba triedy.',
     };
   }
 

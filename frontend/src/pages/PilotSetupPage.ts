@@ -18,9 +18,9 @@ export function PilotSetupPage(): string {
   const needsLogin = isSupabaseConfigured && !auth.user;
   return `
   <section class="auth-page" style="max-width:760px">
-    <h1>Pilot setup</h1>
-    <p class="muted">Vytvor školu, triedu a pseudonymné žiacke kódy. Žiadne osobné údaje.
-      Bez pripojeného API beží v bezpečnom <strong>demo</strong> režime.</p>
+    <h1>Tvorba triedy</h1>
+    <p class="muted">Vytvor školu, triedu a prístupové kódy pre žiakov v troch krokoch.
+      Žiadne osobné údaje žiakov — pracujeme len s prezývkami.</p>
     ${needsLogin ? `
     <div class="card" style="border-left:4px solid var(--color-warm);margin-bottom:var(--space-4)">
       <strong>Potrebné prihlásenie</strong>

@@ -8,7 +8,7 @@ export function LoginPage(): string {
     <h1>Prihlásenie učiteľa</h1>
     <p class="muted">Učitelia a admini sa prihlasujú e-mailom.</p>
 
-    ${isSupabaseConfigured ? '<p class="muted">Nový učiteľ? Najprv si vytvor účet v záložke <strong>Registrácia</strong>, potom pokračuj do <a href="#/pilot">pilot setupu</a>.</p>' : ''}
+    ${isSupabaseConfigured ? '<p class="muted">Nový učiteľ? Najprv si vytvor účet v záložke <strong>Registrácia</strong>, potom pokračuj do <a href="#/pilot">tvorby triedy</a>.</p>' : ''}
 
     <div class="card stack" style="margin-bottom:var(--space-3)">
       <div role="tablist" aria-label="Spôsob prihlásenia" style="display:flex;gap:8px">
@@ -31,7 +31,7 @@ export function LoginPage(): string {
 
     <form id="register-form" class="card stack" novalidate hidden>
       <h3 style="margin:0">Nový učiteľský účet</h3>
-      <p class="muted" style="margin:0">Po registrácii pokračuj do pilot setupu a vytvor školu, triedu a kódy pre žiakov.</p>
+      <p class="muted" style="margin:0">Po registrácii pokračuj do tvorby triedy a vytvor školu, triedu a kódy pre žiakov.</p>
       <label class="field">Zobrazované meno (pseudonym)
         <input id="register-name" type="text" maxlength="80" placeholder="napr. Učiteľka M." autocomplete="name">
       </label>
