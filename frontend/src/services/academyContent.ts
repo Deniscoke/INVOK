@@ -30,7 +30,9 @@ export interface AcademyModule {
   lessons: AcademyLesson[];
 }
 
-const SUPABASE_PUBLIC = 'https://uydxclysmyyxyygewdot.supabase.co/storage/v1/object/public/academy';
+/** Public Storage base for lesson videos — derived from the configured project so
+ *  a fork/self-host serves its own videos without editing this file. */
+const SUPABASE_PUBLIC = `${(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '')}/storage/v1/object/public/academy`;
 
 export const ACADEMY_MODULES: readonly AcademyModule[] = [
   {

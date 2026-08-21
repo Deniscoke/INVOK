@@ -11,7 +11,9 @@
 
   /* Color – text */
   --color-text: #0d0d10;
-  --color-muted: #84817a;
+  /* Muted text is darkened to clear WCAG 2.1 AA (4.75:1 on --color-bg,
+     5.55:1 on white); the previous #84817a only reached 3.3:1. */
+  --color-muted: #6b6862;
   --color-on-primary: #ffffff;
 
   /* Color – brand (playful violet + signature sage green, warm coral/amber) */
