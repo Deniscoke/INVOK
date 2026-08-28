@@ -1,37 +1,33 @@
-# Dependencies
-node_modules/
 
 # Build output
-dist/
-.vite/
-
-# Vercel
-.vercel/
-
+# Dependencies
 # Env files – never commit real secrets
-.env
-.env.local
-.env.*.local
-
-# Test / coverage
-coverage/
-
+# Local video lesson source files (uploaded to Supabase Storage, never commit)
+# Local working/handover docs — keep out of the repo (contain know-how / for sharing only)
 # Logs
-*.log
-npm-debug.log*
-
 # OS / editor
+# Test / coverage
+# Vercel
+*.log
 .DS_Store
-Thumbs.db
+.env
+.env.*.local
+.env.local
 .idea/
+.vercel/
+.vite/
 .vscode/
 /SMARTA/
-
-# Local video lesson source files (uploaded to Supabase Storage, never commit)
+Thumbs.db
+cenova-ponuka-INVOK.md
+coverage/
+dist/
+harmonogram-INVOK-*.xlsx
 invokvideolekcie/
-
-# Local working/handover docs — keep out of the repo (contain know-how / for sharing only)
 kontext.md
+node_modules/
+npm-debug.log*
+ponuka-png/
+ponuka-slides.html
 prehlad-prace-INVOK.md
 vykaz-prace-INVOK.md
-harmonogram-INVOK-*.xlsx
